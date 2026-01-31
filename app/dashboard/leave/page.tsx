@@ -93,12 +93,23 @@ export default function LeavePage() {
     }
   };
 
-  if (status === "loading" || isLoading) {
-    return <Loading fullScreen />;
+  // Redirect if not logged in
+  if (status !== "loading" && !session) {
+    redirect("/login");
   }
 
+  // Show loading for session check
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loading size="lg" />
+      </div>
+    );
+  }
+
+  // Check session exists before accessing properties
   if (!session) {
-    redirect("/login");
+    return null; // This won't be reached due to redirect above, but satisfies TypeScript
   }
 
   const columns = [
@@ -162,9 +173,20 @@ export default function LeavePage() {
           </Button>
         </div>
 
-        <Card>
-          <Table data={leaves} columns={columns} />
-        </Card>
+        {isLoading ? (
+          <Card>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loading size="lg" />
+              <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                Loading leave data...
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <Card>
+            <Table data={leaves} columns={columns} />
+          </Card>
+        )}
 
         <Modal
           isOpen={isModalOpen}

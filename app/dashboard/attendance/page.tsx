@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import Loading from "@/components/ui/Loading";
 import ImportTab from "./components/ImportTab";
 import DataTab from "./components/DataTab";
 import ReportTab from "./components/ReportTab";
@@ -15,14 +14,21 @@ export default function AttendancePage() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("data");
 
-  if (status === "loading") {
-    return <Loading fullScreen />;
-  }
-
-  if (!session) {
+  // Redirect if not authenticated
+  if (status !== "loading" && !session) {
     redirect("/login");
   }
 
+  // Return null during auth check
+  if (status === "loading") {
+    return null;
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  // Access denied
   if (!session.user.permissions.attendance) {
     return (
       <DashboardLayout

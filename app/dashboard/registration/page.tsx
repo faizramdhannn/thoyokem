@@ -14,13 +14,13 @@ export default function RegistrationPage() {
   const { data: session, status } = useSession();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<
-    "pending" | "approved" | "rejected"
-  >("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected">("pending");
 
   useEffect(() => {
     if (session?.user.permissions.registration_request) {
       fetchData();
+    } else if (session && !session.user.permissions.registration_request) {
+      setIsLoading(false);
     }
   }, [session]);
 
@@ -42,9 +42,7 @@ export default function RegistrationPage() {
     try {
       const response = await fetch("/api/registration", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
       });
 
@@ -56,14 +54,21 @@ export default function RegistrationPage() {
     }
   };
 
-  if (status === "loading" || isLoading) {
-    return <Loading fullScreen />;
-  }
-
-  if (!session) {
+  // Redirect if not authenticated
+  if (status !== "loading" && !session) {
     redirect("/login");
   }
 
+  // Return null during auth check
+  if (status === "loading") {
+    return null;
+  }
+
+  if (!session) {
+    return null;
+  }
+
+  // Access denied
   if (!session.user.permissions.registration_request) {
     return (
       <DashboardLayout
@@ -90,9 +95,7 @@ export default function RegistrationPage() {
     );
   }
 
-  const filteredRegistrations = registrations.filter(
-    (r) => r.status === activeTab,
-  );
+  const filteredRegistrations = registrations.filter((r) => r.status === activeTab);
 
   const tabs = [
     {
@@ -138,109 +141,115 @@ export default function RegistrationPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <Card
-                key={tab.id}
-                className={`cursor-pointer transition-all ${
-                  activeTab === tab.id
-                    ? "ring-2 ring-primary"
-                    : "hover:shadow-lg"
-                }`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                      {tab.label}
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                      {tab.count}
-                    </p>
-                  </div>
-                  <Icon className={tab.color} size={28} />
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <div className="flex items-center justify-center py-8">
+                  <Loading />
                 </div>
               </Card>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <Card
+                    key={tab.id}
+                    className={`cursor-pointer transition-all ${
+                      activeTab === tab.id ? "ring-2 ring-primary" : "hover:shadow-lg"
+                    }`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {tab.label}
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                          {tab.count}
+                        </p>
+                      </div>
+                      <Icon className={tab.color} size={28} />
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
 
-        <div className="space-y-3">
-          {filteredRegistrations.length === 0 ? (
-            <Card>
-              <div className="text-center py-10">
-                <AlertCircle className="mx-auto text-gray-400 mb-3" size={40} />
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  No {activeTab} registrations found
-                </p>
-              </div>
-            </Card>
-          ) : (
-            filteredRegistrations.map((registration) => (
-              <Card key={registration.id}>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex-1">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                      {registration.name}
-                    </h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Username: {registration.username}
+            <div className="space-y-3">
+              {filteredRegistrations.length === 0 ? (
+                <Card>
+                  <div className="text-center py-10">
+                    <AlertCircle className="mx-auto text-gray-400 mb-3" size={40} />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      No {activeTab} registrations found
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                      Requested:{" "}
-                      {new Date(registration.created_at).toLocaleString()}
-                    </p>
-                    {registration.update_at !== registration.created_at && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
-                        Updated:{" "}
-                        {new Date(registration.update_at).toLocaleString()}
-                      </p>
-                    )}
                   </div>
+                </Card>
+              ) : (
+                filteredRegistrations.map((registration) => (
+                  <Card key={registration.id}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                          {registration.name}
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          Username: {registration.username}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                          Requested: {new Date(registration.created_at).toLocaleString()}
+                        </p>
+                        {registration.update_at !== registration.created_at && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            Updated: {new Date(registration.update_at).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
 
-                  {activeTab === "pending" && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="success"
-                        onClick={() =>
-                          handleAction(registration.id, "approved")
-                        }
-                      >
-                        <CheckCircle size={14} className="mr-1.5" />
-                        Approve
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() =>
-                          handleAction(registration.id, "rejected")
-                        }
-                      >
-                        <XCircle size={14} className="mr-1.5" />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
+                      {activeTab === "pending" && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            onClick={() => handleAction(registration.id, "approved")}
+                          >
+                            <CheckCircle size={14} className="mr-1.5" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="danger"
+                            onClick={() => handleAction(registration.id, "rejected")}
+                          >
+                            <XCircle size={14} className="mr-1.5" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
 
-                  {activeTab === "approved" && (
-                    <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                      <CheckCircle size={18} />
-                      <span className="font-medium text-sm">Approved</span>
-                    </div>
-                  )}
+                      {activeTab === "approved" && (
+                        <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                          <CheckCircle size={18} />
+                          <span className="font-medium text-sm">Approved</span>
+                        </div>
+                      )}
 
-                  {activeTab === "rejected" && (
-                    <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
-                      <XCircle size={18} />
-                      <span className="font-medium text-sm">Rejected</span>
+                      {activeTab === "rejected" && (
+                        <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                          <XCircle size={18} />
+                          <span className="font-medium text-sm">Rejected</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

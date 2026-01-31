@@ -8,7 +8,6 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Loading from "@/components/ui/Loading";
 import { AlertCircle } from "lucide-react";
-import { readSheet, writeSheet } from "@/lib/sheets";
 
 interface UserPermission {
   id: string;
@@ -26,32 +25,29 @@ export default function SettingsPage() {
   const [users, setUsers] = useState<UserPermission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (session?.user.permissions.setting) {
       fetchUsers();
+    } else if (session && !session.user.permissions.setting) {
+      setIsLoading(false);
     }
   }, [session]);
 
   const fetchUsers = async () => {
     try {
-      const rows = await readSheet("users");
-
-      if (rows && rows.length > 1) {
-        const usersData: UserPermission[] = rows.slice(1).map((row) => ({
-          id: row[0] || "",
-          name: row[1] || "",
-          username: row[2] || "",
-          role: row[4] || "",
-          dashboard: row[5] === "TRUE" || row[5] === true,
-          attendance: row[6] === "TRUE" || row[6] === true,
-          registration_request: row[7] === "TRUE" || row[7] === true,
-          setting: row[8] === "TRUE" || row[8] === true,
-        }));
-        setUsers(usersData);
+      const response = await fetch("/api/users");
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
       }
+      
+      const data = await response.json();
+      setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
+      setMessage({ type: 'error', text: 'Failed to load users. Please refresh the page.' });
     } finally {
       setIsLoading(false);
     }
@@ -71,44 +67,46 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
+    setMessage(null);
+    
     try {
-      const rows = await readSheet("users");
+      const response = await fetch("/api/users", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ users }),
+      });
 
-      if (rows && rows.length > 1) {
-        // Update each user row
-        for (let i = 1; i < rows.length; i++) {
-          const userId = rows[i][0];
-          const user = users.find((u) => u.id === userId);
-
-          if (user) {
-            rows[i][5] = user.dashboard ? "TRUE" : "FALSE";
-            rows[i][6] = user.attendance ? "TRUE" : "FALSE";
-            rows[i][7] = user.registration_request ? "TRUE" : "FALSE";
-            rows[i][8] = user.setting ? "TRUE" : "FALSE";
-          }
-        }
-
-        // Write back to sheet
-        await writeSheet("users", `A2:I${rows.length}`, rows.slice(1));
-
-        alert("Permissions updated successfully!");
+      if (!response.ok) {
+        throw new Error('Failed to update permissions');
       }
+
+      setMessage({ type: 'success', text: 'Permissions updated successfully!' });
     } catch (error) {
       console.error("Error saving permissions:", error);
-      alert("Failed to update permissions. Please try again.");
+      setMessage({ type: 'error', text: 'Failed to update permissions. Please try again.' });
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (status === "loading" || isLoading) {
-    return <Loading fullScreen />;
-  }
-
-  if (!session) {
+  // Redirect if not authenticated
+  if (status !== "loading" && !session) {
     redirect("/login");
   }
 
+  // Return null during auth check - will redirect anyway
+  if (status === "loading") {
+    return null;
+  }
+
+  // Now session is guaranteed to exist
+  if (!session) {
+    return null;
+  }
+
+  // Access denied - but show layout
   if (!session.user.permissions.setting) {
     return (
       <DashboardLayout
@@ -167,73 +165,104 @@ export default function SettingsPage() {
           </Button>
         </div>
 
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Role
-                  </th>
-                  {permissions.map((perm) => (
-                    <th
-                      key={perm.key}
-                      className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      {perm.label}
+        {message && (
+          <div
+            className={`p-3 rounded-lg text-sm ${
+              message.type === 'success'
+                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400'
+                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
+
+        {isLoading ? (
+          <Card>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loading size="lg" />
+              <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                Loading users...
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      User
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div>
-                        <div className="text-xs font-medium text-gray-900 dark:text-white">
-                          {user.name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {user.username}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
-                        {user.role}
-                      </span>
-                    </td>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Role
+                    </th>
                     {permissions.map((perm) => (
-                      <td
+                      <th
                         key={perm.key}
-                        className="px-4 py-3 whitespace-nowrap text-center"
+                        className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                       >
-                        <input
-                          type="checkbox"
-                          checked={user[perm.key]}
-                          onChange={(e) =>
-                            handlePermissionChange(
-                              user.id,
-                              perm.key,
-                              e.target.checked,
-                            )
-                          }
-                          className="w-4 h-4 text-primary rounded focus:ring-primary cursor-pointer"
-                        />
-                      </td>
+                        {perm.label}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">
+                        No users found
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((user) => (
+                      <tr
+                        key={user.id}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div>
+                            <div className="text-xs font-medium text-gray-900 dark:text-white">
+                              {user.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {user.username}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                            {user.role}
+                          </span>
+                        </td>
+                        {permissions.map((perm) => (
+                          <td
+                            key={perm.key}
+                            className="px-4 py-3 whitespace-nowrap text-center"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={user[perm.key]}
+                              onChange={(e) =>
+                                handlePermissionChange(
+                                  user.id,
+                                  perm.key,
+                                  e.target.checked,
+                                )
+                              }
+                              className="w-4 h-4 text-primary rounded focus:ring-primary cursor-pointer"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
           <div className="flex">
