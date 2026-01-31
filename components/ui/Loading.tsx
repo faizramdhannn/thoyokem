@@ -7,9 +7,9 @@ interface LoadingProps {
 
 export default function Loading({ size = 'md', fullScreen = false }: LoadingProps) {
   const sizeClasses = {
-    sm: 'w-4 h-4 border-2',
-    md: 'w-8 h-8 border-3',
-    lg: 'w-12 h-12 border-4',
+    sm: 'w-3 h-3 border-2',
+    md: 'w-6 h-6 border-2',
+    lg: 'w-10 h-10 border-3',
   };
 
   const spinner = (
@@ -26,5 +26,5 @@ export default function Loading({ size = 'md', fullScreen = false }: LoadingProp
     );
   }
 
-  return <div className="flex justify-center items-center p-4">{spinner}</div>;
+  return <div className="flex justify-center items-center p-3">{spinner}</div>;
 }

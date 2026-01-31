@@ -1,5 +1,6 @@
 import { AttendanceImport, AttendanceRecord, AttendanceRecap } from '@/types';
 import { format, parse } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 interface ProcessedDay {
   masuk?: string;
@@ -165,6 +166,48 @@ function timeToMinutes(time: string): number {
   return hours * 60 + minutes;
 }
 
+export function exportToXLSX(records: AttendanceRecord[]): void {
+  const exportData = records.map((r) => ({
+    'ID': r.id,
+    'Nama': r.nama,
+    'Jabatan': r.jabatan,
+    'Tanggal Absensi': r.tanggal_absensi,
+    'Jam Masuk (Target)': r.jam_masuk_target,
+    'Jam Masuk (Actual)': r.jam_masuk_actual,
+    'Keterlambatan (menit)': r.keterlambatan_menit,
+    'Keterangan Masuk': r.keterangan_masuk,
+    'Jam Pulang (Target)': r.jam_pulang_target,
+    'Jam Pulang (Actual)': r.jam_pulang_actual,
+    'Overtime (menit)': r.overtime_menit,
+    'Keterangan Pulang': r.keterangan_pulang,
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Report');
+  
+  XLSX.writeFile(workbook, `attendance_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+export function exportRecapToXLSX(recap: AttendanceRecap[]): void {
+  const exportData = recap.map((r) => ({
+    'Nama Karyawan': r.nama_karyawan,
+    'Jumlah Keterlambatan': r.jumlah_keterlambatan,
+    'Total Keterlambatan (Menit)': r.total_keterlambatan_menit,
+    'Rata-rata Keterlambatan': r.average_keterlambatan,
+    'Jumlah Overtime': r.jumlah_overtime,
+    'Total Overtime (Menit)': r.total_overtime_menit,
+    'Rata-rata Overtime': r.average_overtime,
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Recap');
+  
+  XLSX.writeFile(workbook, `attendance_recap_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// Backward compatibility - keep CSV export functions
 export function exportToCSV(records: AttendanceRecord[]): string {
   const headers = [
     'ID',

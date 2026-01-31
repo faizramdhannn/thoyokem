@@ -92,21 +92,21 @@ export default function Sidebar({ permissions }: SidebarProps) {
 
   const SidebarContent = () => (
     <>
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
-            <h1 className="text-xl font-bold text-primary">Attendance</h1>
+            <h1 className="text-base font-bold text-primary">Attendance</h1>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:block p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="hidden md:block p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           if (!item.enabled) return null;
 
@@ -118,33 +118,33 @@ export default function Sidebar({ permissions }: SidebarProps) {
               key={item.href}
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                 isActive
                   ? 'bg-primary text-white'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              <Icon size={20} />
+              <Icon size={16} />
               {!isCollapsed && <span className="font-medium">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+      <div className="p-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
         <button
           onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
-          {isDark ? <Sun size={20} /> : <Moon size={20} />}
-          {!isCollapsed && <span className="font-medium">{isDark ? 'Light Mode' : 'Dark Mode'}</span>}
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          {!isCollapsed && <span className="font-medium">{isDark ? 'Light' : 'Dark'}</span>}
         </button>
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
         >
-          <LogOut size={20} />
+          <LogOut size={16} />
           {!isCollapsed && <span className="font-medium">Logout</span>}
         </button>
       </div>
@@ -156,9 +156,9 @@ export default function Sidebar({ permissions }: SidebarProps) {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg text-gray-700 dark:text-gray-300"
+        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-md bg-white dark:bg-gray-800 shadow-lg text-gray-700 dark:text-gray-300"
       >
-        {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
+        {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Mobile Overlay */}
@@ -172,7 +172,7 @@ export default function Sidebar({ permissions }: SidebarProps) {
       {/* Desktop Sidebar */}
       <aside
         className={`hidden md:flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ${
-          isCollapsed ? 'w-20' : 'w-64'
+          isCollapsed ? 'w-16' : 'w-52'
         }`}
       >
         <SidebarContent />
@@ -180,7 +180,7 @@ export default function Sidebar({ permissions }: SidebarProps) {
 
       {/* Mobile Sidebar */}
       <aside
-        className={`md:hidden fixed top-0 left-0 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-40 transition-transform duration-300 w-64 flex flex-col ${
+        className={`md:hidden fixed top-0 left-0 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 z-40 transition-transform duration-300 w-52 flex flex-col ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

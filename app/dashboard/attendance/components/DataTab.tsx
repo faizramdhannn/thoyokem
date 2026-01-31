@@ -7,6 +7,7 @@ import Loading from '@/components/ui/Loading';
 import Button from '@/components/ui/Button';
 import { AttendanceImport } from '@/types';
 import { Search, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function DataTab() {
   const [data, setData] = useState<AttendanceImport[]>([]);
@@ -57,44 +58,26 @@ export default function DataTab() {
   };
 
   const handleExport = () => {
-    const csv = [
-      [
-        'Cloud ID',
-        'ID',
-        'Nama',
-        'Tanggal Absensi',
-        'Jam Absensi',
-        'Verifikasi',
-        'Tipe Absensi',
-        'Jabatan',
-        'Kantor',
-      ],
-      ...filteredData.map((item) => [
-        item.cloud_id,
-        item.id,
-        item.nama,
-        item.tanggal_absensi,
-        item.jam_absensi,
-        item.verifikasi,
-        item.tipe_absensi,
-        item.jabatan,
-        item.kantor,
-      ]),
-    ]
-      .map((row) => row.join(','))
-      .join('\n');
+    const exportData = filteredData.map((item) => ({
+      'Cloud ID': item.cloud_id,
+      'ID': item.id,
+      'Nama': item.nama,
+      'Tanggal Absensi': item.tanggal_absensi,
+      'Jam Absensi': item.jam_absensi,
+      'Verifikasi': item.verifikasi,
+      'Tipe Absensi': item.tipe_absensi,
+      'Jabatan': item.jabatan,
+      'Kantor': item.kantor,
+    }));
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `attendance_data_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Data');
+    
+    XLSX.writeFile(workbook, `attendance_data_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const columns = [
-    { header: 'ID', accessor: 'id' as keyof AttendanceImport },
     { header: 'Nama', accessor: 'nama' as keyof AttendanceImport },
     { header: 'Tanggal', accessor: 'tanggal_absensi' as keyof AttendanceImport },
     { header: 'Jam', accessor: 'jam_absensi' as keyof AttendanceImport },
@@ -108,24 +91,24 @@ export default function DataTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
-        <div className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="space-y-3">
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={20}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                size={16}
               />
               <input
                 type="text"
                 placeholder="Search by name or position..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+                className="input-field pl-9"
               />
             </div>
-            <div className="w-full md:w-48">
+            <div className="w-full md:w-40">
               <input
                 type="date"
                 value={selectedDate}
@@ -134,12 +117,12 @@ export default function DataTab() {
               />
             </div>
             <Button onClick={handleExport} variant="secondary">
-              <Download size={18} className="mr-2" />
-              Export CSV
+              <Download size={14} className="mr-1.5" />
+              Export
             </Button>
           </div>
 
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
             Showing {filteredData.length} of {data.length} records
           </div>
         </div>

@@ -6,7 +6,7 @@ import Table from '@/components/ui/Table';
 import Loading from '@/components/ui/Loading';
 import Button from '@/components/ui/Button';
 import { AttendanceImport, AttendanceRecord } from '@/types';
-import { processAttendanceData, exportToCSV } from '@/utils/attendance';
+import { processAttendanceData, exportToXLSX } from '@/utils/attendance';
 import { Search, Download, Calendar } from 'lucide-react';
 
 export default function ReportTab() {
@@ -71,18 +71,10 @@ export default function ReportTab() {
   };
 
   const handleExport = () => {
-    const csv = exportToCSV(filteredData);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `attendance_report_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    exportToXLSX(filteredData);
   };
 
   const columns = [
-    { header: 'ID', accessor: 'id' as keyof AttendanceRecord },
     { header: 'Nama', accessor: 'nama' as keyof AttendanceRecord },
     { header: 'Jabatan', accessor: 'jabatan' as keyof AttendanceRecord },
     { header: 'Tanggal', accessor: 'tanggal_absensi' as keyof AttendanceRecord },
@@ -91,7 +83,7 @@ export default function ReportTab() {
       accessor: (row: AttendanceRecord) => (
         <div className="text-center">
           <div className="text-xs text-gray-500">Target: {row.jam_masuk_target}</div>
-          <div className={row.keterlambatan_menit > 0 ? 'text-red-600 font-medium' : ''}>
+          <div className={row.keterlambatan_menit > 0 ? 'text-red-600 font-medium text-xs' : 'text-xs'}>
             Actual: {row.jam_masuk_actual || '-'}
           </div>
         </div>
@@ -101,7 +93,7 @@ export default function ReportTab() {
       header: 'Keterlambatan',
       accessor: (row: AttendanceRecord) => (
         <div className="text-center">
-          <div className="font-medium">{row.keterlambatan_menit} min</div>
+          <div className="font-medium text-xs">{row.keterlambatan_menit} min</div>
           <div
             className={`text-xs ${
               row.keterangan_masuk === 'Terlambat'
@@ -119,7 +111,7 @@ export default function ReportTab() {
       accessor: (row: AttendanceRecord) => (
         <div className="text-center">
           <div className="text-xs text-gray-500">Target: {row.jam_pulang_target}</div>
-          <div className={row.overtime_menit > 0 ? 'text-blue-600 font-medium' : ''}>
+          <div className={row.overtime_menit > 0 ? 'text-blue-600 font-medium text-xs' : 'text-xs'}>
             Actual: {row.jam_pulang_actual || '-'}
           </div>
         </div>
@@ -129,7 +121,7 @@ export default function ReportTab() {
       header: 'Overtime',
       accessor: (row: AttendanceRecord) => (
         <div className="text-center">
-          <div className="font-medium">{row.overtime_menit} min</div>
+          <div className="font-medium text-xs">{row.overtime_menit} min</div>
           <div
             className={`text-xs ${
               row.keterangan_pulang === 'Overtime'
@@ -149,61 +141,61 @@ export default function ReportTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
-        <div className="space-y-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row gap-4">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="flex-1 relative">
                 <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={20}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
                 />
                 <input
                   type="text"
                   placeholder="Search by name or position..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field pl-9"
                 />
               </div>
               <Button onClick={handleExport} variant="secondary">
-                <Download size={18} className="mr-2" />
-                Export Report
+                <Download size={14} className="mr-1.5" />
+                Export
               </Button>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="flex-1 relative">
                 <Calendar
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={20}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
                 />
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field pl-9"
                   placeholder="From Date"
                 />
               </div>
               <div className="flex-1 relative">
                 <Calendar
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={20}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
                 />
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field pl-9"
                   placeholder="To Date"
                 />
               </div>
             </div>
           </div>
 
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
             Showing {filteredData.length} of {reportData.length} records
           </div>
         </div>

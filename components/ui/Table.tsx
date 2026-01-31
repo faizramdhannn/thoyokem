@@ -21,7 +21,7 @@ export default function Table<T>({ data, columns, className = '' }: TableProps<T
             {columns.map((column, index) => (
               <th
                 key={index}
-                className={`px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${column.className || ''}`}
+                className={`px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${column.className || ''}`}
               >
                 {column.header}
               </th>
@@ -33,7 +33,7 @@ export default function Table<T>({ data, columns, className = '' }: TableProps<T
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+                className="px-3 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
               >
                 No data available
               </td>
@@ -44,7 +44,7 @@ export default function Table<T>({ data, columns, className = '' }: TableProps<T
                 {columns.map((column, colIndex) => (
                   <td
                     key={colIndex}
-                    className={`px-4 py-3 text-sm text-gray-900 dark:text-gray-100 ${column.className || ''}`}
+                    className={`px-3 py-2 text-xs text-gray-900 dark:text-gray-100 ${column.className || ''}`}
                   >
                     {typeof column.accessor === 'function'
                       ? column.accessor(row)
