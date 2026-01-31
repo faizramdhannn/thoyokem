@@ -1,0 +1,221 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { redirect } from 'next/navigation';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Loading from '@/components/ui/Loading';
+import { Registration } from '@/types';
+import { AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
+
+export default function RegistrationPage() {
+  const { data: session, status } = useSession();
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+
+  useEffect(() => {
+    if (session?.user.permissions.registration_request) {
+      fetchData();
+    }
+  }, [session]);
+
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/registration');
+      if (response.ok) {
+        const data = await response.json();
+        setRegistrations(data);
+      }
+    } catch (error) {
+      console.error('Error fetching registrations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAction = async (id: string, status: 'approved' | 'rejected') => {
+    try {
+      const response = await fetch('/api/registration', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, status }),
+      });
+
+      if (response.ok) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error updating registration:', error);
+    }
+  };
+
+  if (status === 'loading' || isLoading) {
+    return <Loading fullScreen />;
+  }
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  if (!session.user.permissions.registration_request) {
+    return (
+      <DashboardLayout user={session.user}>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Access Denied
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              You don't have permission to access this page.
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const filteredRegistrations = registrations.filter((r) => r.status === activeTab);
+
+  const tabs = [
+    {
+      id: 'pending' as const,
+      label: 'Pending',
+      icon: Clock,
+      color: 'text-orange-500',
+      count: registrations.filter((r) => r.status === 'pending').length,
+    },
+    {
+      id: 'approved' as const,
+      label: 'Approved',
+      icon: CheckCircle,
+      color: 'text-green-500',
+      count: registrations.filter((r) => r.status === 'approved').length,
+    },
+    {
+      id: 'rejected' as const,
+      label: 'Rejected',
+      icon: XCircle,
+      color: 'text-red-500',
+      count: registrations.filter((r) => r.status === 'rejected').length,
+    },
+  ];
+
+  return (
+    <DashboardLayout user={session.user}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Registration Requests
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Review and manage user registration requests
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <Card
+                key={tab.id}
+                className={`cursor-pointer transition-all ${
+                  activeTab === tab.id
+                    ? 'ring-2 ring-primary'
+                    : 'hover:shadow-lg'
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      {tab.label}
+                    </p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                      {tab.count}
+                    </p>
+                  </div>
+                  <Icon className={tab.color} size={32} />
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        <div className="space-y-4">
+          {filteredRegistrations.length === 0 ? (
+            <Card>
+              <div className="text-center py-12">
+                <AlertCircle className="mx-auto text-gray-400 mb-4" size={48} />
+                <p className="text-gray-600 dark:text-gray-400">
+                  No {activeTab} registrations found
+                </p>
+              </div>
+            </Card>
+          ) : (
+            filteredRegistrations.map((registration) => (
+              <Card key={registration.id}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {registration.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Username: {registration.username}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      Requested: {new Date(registration.created_at).toLocaleString()}
+                    </p>
+                    {registration.update_at !== registration.created_at && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                        Updated: {new Date(registration.update_at).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {activeTab === 'pending' && (
+                    <div className="flex gap-3">
+                      <Button
+                        variant="success"
+                        onClick={() => handleAction(registration.id, 'approved')}
+                      >
+                        <CheckCircle size={18} className="mr-2" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => handleAction(registration.id, 'rejected')}
+                      >
+                        <XCircle size={18} className="mr-2" />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+
+                  {activeTab === 'approved' && (
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                      <CheckCircle size={20} />
+                      <span className="font-medium">Approved</span>
+                    </div>
+                  )}
+
+                  {activeTab === 'rejected' && (
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                      <XCircle size={20} />
+                      <span className="font-medium">Rejected</span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}
