@@ -23,9 +23,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error('No users found');
           }
 
-          // Skip header row
           const users = rows.slice(1);
-          
           const user = users.find((row) => row[2] === credentials.username);
 
           if (!user) {
@@ -41,7 +39,7 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user[0],
             name: user[1],
-            email: user[2], // Using username as email
+            email: user[2],
             role: user[4],
             permissions: {
               dashboard: user[5] === 'TRUE' || user[5] === true,
