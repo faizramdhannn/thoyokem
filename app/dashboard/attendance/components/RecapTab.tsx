@@ -7,7 +7,7 @@ import Loading from '@/components/ui/Loading';
 import Button from '@/components/ui/Button';
 import { AttendanceImport, AttendanceRecap } from '@/types';
 import { processAttendanceData, calculateRecap, exportRecapToXLSX } from '@/utils/attendance';
-import { Download, TrendingUp, TrendingDown } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 
 export default function RecapTab() {
   const [rawData, setRawData] = useState<AttendanceImport[]>([]);
@@ -46,6 +46,7 @@ export default function RecapTab() {
 
   const totalLate = recapData.reduce((sum, r) => sum + r.jumlah_keterlambatan, 0);
   const totalOvertime = recapData.reduce((sum, r) => sum + r.jumlah_overtime, 0);
+  const totalAttendance = recapData.reduce((sum, r) => sum + r.jumlah_hadir, 0);
   const avgLateness = recapData.length > 0
     ? Math.round(
         recapData.reduce((sum, r) => sum + r.average_keterlambatan, 0) / recapData.length
@@ -59,6 +60,19 @@ export default function RecapTab() {
 
   const columns = [
     { header: 'Nama Karyawan', accessor: 'nama_karyawan' as keyof AttendanceRecap },
+    {
+      header: 'Jumlah Hadir',
+      accessor: (row: AttendanceRecap) => (
+        <div className="text-center">
+          <div className="flex items-center gap-1.5 justify-center">
+            <Calendar className="text-green-500" size={14} />
+            <span className="font-semibold text-sm text-green-600 dark:text-green-400">
+              {row.jumlah_hadir} hari
+            </span>
+          </div>
+        </div>
+      ),
+    },
     {
       header: 'Keterlambatan',
       accessor: (row: AttendanceRecap) => (
@@ -101,7 +115,23 @@ export default function RecapTab() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                Total Attendance
+              </p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+                {totalAttendance}
+              </p>
+            </div>
+            <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
+              <Calendar className="text-green-500" size={20} />
+            </div>
+          </div>
+        </Card>
+
         <Card>
           <div className="flex items-center justify-between">
             <div>

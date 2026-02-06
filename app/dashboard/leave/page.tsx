@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Loading from "@/components/ui/Loading";
 import { LeaveAttendance, StaffList } from "@/types";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, Calendar, Edit, Trash2, Upload, FileText } from "lucide-react";
 
 export default function LeavePage() {
   const { data: session, status } = useSession();
@@ -18,6 +18,9 @@ export default function LeavePage() {
   const [staff, setStaff] = useState<StaffList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLeave, setEditingLeave] = useState<LeaveAttendance | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     staff_id: "",
     date_from: "",
@@ -55,42 +58,139 @@ export default function LeavePage() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+    }
+  };
+
+  const uploadFile = async (): Promise<string> => {
+    if (!uploadedFile) return "";
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Failed to upload file");
+      return "";
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const selectedStaff = staff.find((s) => s.id === formData.staff_id);
-    if (!selectedStaff) return;
+    // Upload file if exists
+    let fileUrl = formData.link_url;
+    if (uploadedFile) {
+      fileUrl = await uploadFile();
+      if (!fileUrl) return; // Upload failed
+    }
+
+    if (editingLeave) {
+      // Update existing leave
+      try {
+        const response = await fetch("/api/leave", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingLeave.id,
+            date_from: formData.date_from,
+            date_end: formData.date_end,
+            category: formData.category,
+            link_url: fileUrl,
+          }),
+        });
+
+        if (response.ok) {
+          resetForm();
+          fetchData();
+        }
+      } catch (error) {
+        console.error("Error updating leave:", error);
+      }
+    } else {
+      // Create new leave
+      const selectedStaff = staff.find((s) => s.id === formData.staff_id);
+      if (!selectedStaff) return;
+
+      try {
+        const response = await fetch("/api/leave", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            registration_id: selectedStaff.registration_id,
+            name: selectedStaff.name,
+            date_from: formData.date_from,
+            date_end: formData.date_end,
+            category: formData.category,
+            link_url: fileUrl,
+          }),
+        });
+
+        if (response.ok) {
+          resetForm();
+          fetchData();
+        }
+      } catch (error) {
+        console.error("Error creating leave:", error);
+      }
+    }
+  };
+
+  const handleEdit = (leave: LeaveAttendance) => {
+    setEditingLeave(leave);
+    setFormData({
+      staff_id: "",
+      date_from: leave.date_from,
+      date_end: leave.date_end,
+      category: leave.category,
+      link_url: leave.link_url,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this leave request?")) return;
 
     try {
-      const response = await fetch("/api/leave", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          registration_id: selectedStaff.registration_id,
-          name: selectedStaff.name,
-          date_from: formData.date_from,
-          date_end: formData.date_end,
-          category: formData.category,
-          link_url: formData.link_url,
-        }),
+      const response = await fetch(`/api/leave?id=${id}`, {
+        method: "DELETE",
       });
 
       if (response.ok) {
-        setIsModalOpen(false);
-        setFormData({
-          staff_id: "",
-          date_from: "",
-          date_end: "",
-          category: "sick",
-          link_url: "",
-        });
         fetchData();
       }
     } catch (error) {
-      console.error("Error creating leave:", error);
+      console.error("Error deleting leave:", error);
     }
+  };
+
+  const resetForm = () => {
+    setIsModalOpen(false);
+    setEditingLeave(null);
+    setUploadedFile(null);
+    setFormData({
+      staff_id: "",
+      date_from: "",
+      date_end: "",
+      category: "sick",
+      link_url: "",
+    });
   };
 
   // Redirect if not logged in
@@ -107,9 +207,8 @@ export default function LeavePage() {
     );
   }
 
-  // Check session exists before accessing properties
   if (!session) {
-    return null; // This won't be reached due to redirect above, but satisfies TypeScript
+    return null;
   }
 
   const columns = [
@@ -125,25 +224,45 @@ export default function LeavePage() {
       ),
     },
     {
-      header: "Link",
+      header: "Document",
       accessor: (row: LeaveAttendance) =>
         row.link_url ? (
           <a
             href={row.link_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline text-xs"
+            className="text-primary hover:underline text-xs inline-flex items-center gap-1"
           >
+            <FileText size={12} />
             View
           </a>
         ) : (
-          "-"
+          <span className="text-gray-400 text-xs">-</span>
         ),
     },
     {
       header: "Created",
       accessor: (row: LeaveAttendance) =>
         new Date(row.created_at).toLocaleDateString(),
+    },
+    {
+      header: "Actions",
+      accessor: (row: LeaveAttendance) => (
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleEdit(row)}
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+          >
+            <Edit size={14} />
+          </button>
+          <button
+            onClick={() => handleDelete(row.id)}
+            className="text-red-600 hover:text-red-800 dark:text-red-400"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -190,28 +309,42 @@ export default function LeavePage() {
 
         <Modal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          title="Add Leave Request"
+          onClose={resetForm}
+          title={editingLeave ? "Edit Leave Request" : "Add Leave Request"}
         >
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div>
-              <label className="label-field">Employee</label>
-              <select
-                value={formData.staff_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, staff_id: e.target.value })
-                }
-                className="input-field"
-                required
-              >
-                <option value="">Select employee</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!editingLeave && (
+              <div>
+                <label className="label-field">Employee</label>
+                <select
+                  value={formData.staff_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, staff_id: e.target.value })
+                  }
+                  className="input-field"
+                  required
+                >
+                  <option value="">Select employee</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {editingLeave && (
+              <div>
+                <label className="label-field">Employee</label>
+                <input
+                  type="text"
+                  value={editingLeave.name}
+                  className="input-field bg-gray-100 dark:bg-gray-700"
+                  disabled
+                />
+              </div>
+            )}
 
             <div>
               <label className="label-field">Category</label>
@@ -259,29 +392,48 @@ export default function LeavePage() {
             </div>
 
             <div>
-              <label className="label-field">Link URL (Optional)</label>
-              <input
-                type="url"
-                value={formData.link_url}
-                onChange={(e) =>
-                  setFormData({ ...formData, link_url: e.target.value })
-                }
-                className="input-field"
-                placeholder="https://..."
-              />
+              <label className="label-field">Document Upload</label>
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="cursor-pointer flex flex-col items-center"
+                >
+                  <Upload className="text-gray-400 mb-2" size={32} />
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {uploadedFile
+                      ? uploadedFile.name
+                      : "Click to upload document"}
+                  </span>
+                  <span className="text-xs text-gray-500 mt-1">
+                    PDF, DOC, DOCX, JPG, PNG
+                  </span>
+                </label>
+              </div>
+              {formData.link_url && !uploadedFile && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                  Current: <a href={formData.link_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View Document</a>
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 justify-end pt-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setIsModalOpen(false)}
-              >
+              <Button type="button" variant="secondary" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary">
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isUploading}
+              >
                 <Calendar size={14} className="mr-1.5" />
-                Add Leave
+                {editingLeave ? "Update" : "Add"} Leave
               </Button>
             </div>
           </form>
