@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { readSheet, appendSheet } from '@/lib/sheets';
+import { readSheet, appendSheet, writeSheet, deleteRow } from '@/lib/sheets';
 import { LeaveAttendance } from '@/types';
 
 export async function GET() {
@@ -46,11 +46,8 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
-
-    // Get existing data to generate new ID
     const rows = await readSheet('leave_attendance');
     const newId = rows.length > 1 ? String(rows.length) : '1';
-
     const now = new Date().toISOString();
 
     const newLeave = [
@@ -71,5 +68,70 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating leave:', error);
     return NextResponse.json({ error: 'Failed to create leave' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const data = await request.json();
+    const { id, ...updates } = data;
+
+    const rows = await readSheet('leave_attendance');
+    const rowIndex = rows.findIndex((row, index) => index > 0 && row[0] === id);
+
+    if (rowIndex === -1) {
+      return NextResponse.json({ error: 'Leave not found' }, { status: 404 });
+    }
+
+    const now = new Date().toISOString();
+    rows[rowIndex][3] = updates.date_from || rows[rowIndex][3];
+    rows[rowIndex][4] = updates.date_end || rows[rowIndex][4];
+    rows[rowIndex][5] = updates.category || rows[rowIndex][5];
+    rows[rowIndex][6] = updates.link_url || rows[rowIndex][6];
+    rows[rowIndex][8] = now;
+
+    await writeSheet('leave_attendance', `A${rowIndex + 1}:I${rowIndex + 1}`, [rows[rowIndex]]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating leave:', error);
+    return NextResponse.json({ error: 'Failed to update leave' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID required' }, { status: 400 });
+    }
+
+    const rows = await readSheet('leave_attendance');
+    const rowIndex = rows.findIndex((row, index) => index > 0 && row[0] === id);
+
+    if (rowIndex === -1) {
+      return NextResponse.json({ error: 'Leave not found' }, { status: 404 });
+    }
+
+    await deleteRow('leave_attendance', rowIndex);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting leave:', error);
+    return NextResponse.json({ error: 'Failed to delete leave' }, { status: 500 });
   }
 }

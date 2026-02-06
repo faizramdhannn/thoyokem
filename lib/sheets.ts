@@ -76,7 +76,6 @@ export async function deleteRow(sheetName: string, rowIndex: number) {
   try {
     const sheets = await getGoogleSheetsClient();
     
-    // Get sheet ID first
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
     });

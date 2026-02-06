@@ -52,6 +52,7 @@ export interface AttendanceRecord {
 
 export interface AttendanceRecap {
   nama_karyawan: string;
+  jumlah_hadir: number; // NEW: Total hari hadir
   jumlah_keterlambatan: number;
   total_keterlambatan_menit: number;
   average_keterlambatan: number;

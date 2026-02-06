@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -45,7 +45,7 @@ export default function Sidebar({ permissions }: SidebarProps) {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const theme = localStorage.getItem('theme');
     if (theme === 'dark') {
       setIsDark(true);
@@ -111,7 +111,8 @@ export default function Sidebar({ permissions }: SidebarProps) {
           if (!item.enabled) return null;
 
           const Icon = item.icon;
-          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+          // FIXED: Exact match only, no startsWith
+          const isActive = pathname === item.href;
 
           return (
             <Link

@@ -1,5 +1,4 @@
 import { AttendanceImport, AttendanceRecord, AttendanceRecap } from '@/types';
-import { format, parse } from 'date-fns';
 import * as XLSX from 'xlsx';
 
 interface ProcessedDay {
@@ -8,7 +7,6 @@ interface ProcessedDay {
 }
 
 export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRecord[] {
-  // Group by employee and date
   const grouped = new Map<string, Map<string, ProcessedDay>>();
 
   rawData.forEach((record) => {
@@ -31,7 +29,6 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
     }
   });
 
-  // Create attendance records
   const records: AttendanceRecord[] = [];
 
   rawData.forEach((record) => {
@@ -42,7 +39,6 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
     const dayRecord = dateMap.get(record.tanggal_absensi);
     if (!dayRecord) return;
 
-    // Check if we already processed this day
     const existingRecord = records.find(
       (r) => r.id === record.id && r.tanggal_absensi === record.tanggal_absensi
     );
@@ -60,7 +56,6 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
     let overtimeMenit = 0;
     let keteranganPulang = '';
 
-    // Process masuk
     if (dayRecord.masuk) {
       jamMasukActual = dayRecord.masuk;
       const targetMinutes = timeToMinutes(jamMasukTarget);
@@ -74,7 +69,6 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
       }
     }
 
-    // Process pulang
     if (dayRecord.pulang) {
       jamPulangActual = dayRecord.pulang;
       const targetMinutes = timeToMinutes(jamPulangTarget);
@@ -114,6 +108,7 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
 
 export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
   const employeeMap = new Map<string, {
+    uniqueDates: Set<string>;
     keterlambatan: number[];
     overtime: number[];
   }>();
@@ -121,12 +116,16 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
   records.forEach((record) => {
     if (!employeeMap.has(record.nama)) {
       employeeMap.set(record.nama, {
+        uniqueDates: new Set(),
         keterlambatan: [],
         overtime: [],
       });
     }
 
     const empData = employeeMap.get(record.nama)!;
+    
+    // Count unique attendance dates
+    empData.uniqueDates.add(record.tanggal_absensi);
     
     if (record.keterlambatan_menit > 0) {
       empData.keterlambatan.push(record.keterlambatan_menit);
@@ -145,6 +144,7 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
 
     recap.push({
       nama_karyawan: nama,
+      jumlah_hadir: data.uniqueDates.size, // NEW: Total unique days present
       jumlah_keterlambatan: data.keterlambatan.length,
       total_keterlambatan_menit: totalKeterlambatan,
       average_keterlambatan: data.keterlambatan.length > 0 
@@ -192,6 +192,7 @@ export function exportToXLSX(records: AttendanceRecord[]): void {
 export function exportRecapToXLSX(recap: AttendanceRecap[]): void {
   const exportData = recap.map((r) => ({
     'Nama Karyawan': r.nama_karyawan,
+    'Jumlah Hadir': r.jumlah_hadir,
     'Jumlah Keterlambatan': r.jumlah_keterlambatan,
     'Total Keterlambatan (Menit)': r.total_keterlambatan_menit,
     'Rata-rata Keterlambatan': r.average_keterlambatan,
@@ -205,67 +206,4 @@ export function exportRecapToXLSX(recap: AttendanceRecap[]): void {
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Recap');
   
   XLSX.writeFile(workbook, `attendance_recap_${new Date().toISOString().split('T')[0]}.xlsx`);
-}
-
-// Backward compatibility - keep CSV export functions
-export function exportToCSV(records: AttendanceRecord[]): string {
-  const headers = [
-    'ID',
-    'Nama',
-    'Jabatan',
-    'Tanggal Absensi',
-    'Jam Masuk',
-    'Jam Absensi',
-    'Keterlambatan (menit)',
-    'Keterangan',
-    'Jam Pulang',
-    'Jam Absensi',
-    'Overtime (menit)',
-    'Keterangan',
-  ];
-
-  const rows = records.map((r) => [
-    r.id,
-    r.nama,
-    r.jabatan,
-    r.tanggal_absensi,
-    r.jam_masuk_target,
-    r.jam_masuk_actual,
-    r.keterlambatan_menit,
-    r.keterangan_masuk,
-    r.jam_pulang_target,
-    r.jam_pulang_actual,
-    r.overtime_menit,
-    r.keterangan_pulang,
-  ]);
-
-  const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
-  return csv;
-}
-
-export function exportRecapToCSV(recap: AttendanceRecap[]): string {
-  const headers = [
-    'Nama Karyawan',
-    'Jumlah Keterlambatan',
-    'Total (Menit)',
-    'Average',
-    '',
-    'Jumlah Overtime',
-    'Total (Menit)',
-    'Average',
-  ];
-
-  const rows = recap.map((r) => [
-    r.nama_karyawan,
-    r.jumlah_keterlambatan,
-    r.total_keterlambatan_menit,
-    r.average_keterlambatan,
-    '',
-    r.jumlah_overtime,
-    r.total_overtime_menit,
-    r.average_overtime,
-  ]);
-
-  const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
-  return csv;
 }

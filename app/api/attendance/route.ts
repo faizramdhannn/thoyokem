@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
     
-    // Import data from CSV
     if (Array.isArray(data)) {
       const values = data.map((item: AttendanceImport) => [
         item.cloud_id,
