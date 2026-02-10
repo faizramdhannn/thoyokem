@@ -144,7 +144,7 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
 
     recap.push({
       nama_karyawan: nama,
-      jumlah_hadir: data.uniqueDates.size, // NEW: Total unique days present
+      jumlah_hadir: data.uniqueDates.size,
       jumlah_keterlambatan: data.keterlambatan.length,
       total_keterlambatan_menit: totalKeterlambatan,
       average_keterlambatan: data.keterlambatan.length > 0 
@@ -161,8 +161,15 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
   return recap.sort((a, b) => a.nama_karyawan.localeCompare(b.nama_karyawan));
 }
 
+/**
+ * Convert time string to minutes
+ * Supports both ':' and '.' as separator
+ * Examples: "17:00", "17.00" both return 1020
+ */
 function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
+  // Normalize the separator: replace '.' with ':'
+  const normalizedTime = time.replace('.', ':');
+  const [hours, minutes] = normalizedTime.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
