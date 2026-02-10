@@ -163,14 +163,43 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
 
 /**
  * Convert time string to minutes
- * Supports both ':' and '.' as separator
- * Examples: "17:00", "17.00" both return 1020
+ * Supports multiple formats:
+ * - Standard: "17:00" or "17.00" → 1020 minutes
+ * - Excel decimal: "0.7083333333" → 1020 minutes (17:00)
+ * - Excel decimal: "0.3409722222" → 490 minutes (08:10)
  */
 function timeToMinutes(time: string): number {
-  // Normalize the separator: replace '.' with ':'
-  const normalizedTime = time.replace('.', ':');
-  const [hours, minutes] = normalizedTime.split(':').map(Number);
-  return hours * 60 + minutes;
+  if (!time || time.trim() === '') return 0;
+  
+  const trimmedTime = time.trim();
+  
+  // Check if it's Excel decimal format (starts with 0. and less than 1)
+  if (trimmedTime.startsWith('0.')) {
+    const decimalValue = parseFloat(trimmedTime);
+    if (!isNaN(decimalValue) && decimalValue < 1) {
+      // Convert decimal to total minutes (1 day = 1440 minutes)
+      return Math.round(decimalValue * 1440);
+    }
+  }
+  
+  // Handle standard format with ':' or '.'
+  // First, normalize the separator: replace first '.' with ':'
+  let normalizedTime = trimmedTime;
+  const dotIndex = trimmedTime.indexOf('.');
+  if (dotIndex > 0 && dotIndex < 3) { // Only replace if it's a time separator (e.g., "17.00")
+    normalizedTime = trimmedTime.substring(0, dotIndex) + ':' + trimmedTime.substring(dotIndex + 1);
+  }
+  
+  const parts = normalizedTime.split(':');
+  if (parts.length >= 2) {
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    if (!isNaN(hours) && !isNaN(minutes)) {
+      return hours * 60 + minutes;
+    }
+  }
+  
+  return 0;
 }
 
 export function exportToXLSX(records: AttendanceRecord[]): void {
