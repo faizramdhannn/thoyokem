@@ -1,0 +1,396 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Card from '@/components/ui/Card';
+import Loading from '@/components/ui/Loading';
+import { AttendanceImport, StaffList, LeaveAttendance } from '@/types';
+import { processAttendanceData, calculateRecap } from '@/utils/attendance';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
+import { ChevronLeft, ChevronRight, Cake, FileText, Clock } from 'lucide-react';
+
+interface DashboardContentProps {
+  userName: string;
+}
+
+const PAGE_SIZE = 10;
+
+function PaginationBar({
+  page, total, onChange,
+}: { page: number; total: number; onChange: (p: number) => void }) {
+  return (
+    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+      <span className="text-xs text-gray-500">Page {page} of {total}</span>
+      <div className="flex gap-1">
+        <button
+          onClick={() => onChange(page - 1)}
+          disabled={page === 1}
+          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <button
+          onClick={() => onChange(page + 1)}
+          disabled={page === total}
+          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function paginate<T>(arr: T[], page: number): T[] {
+  return arr.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+}
+
+function totalPages(arr: unknown[]): number {
+  return Math.max(1, Math.ceil(arr.length / PAGE_SIZE));
+}
+
+export default function DashboardContent({ userName }: DashboardContentProps) {
+  const [attendanceData, setAttendanceData] = useState<AttendanceImport[]>([]);
+  const [staffList, setStaffList] = useState<StaffList[]>([]);
+  const [leaveData, setLeaveData] = useState<LeaveAttendance[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [birthdayPage, setBirthdayPage] = useState(1);
+  const [quotaPage, setQuotaPage] = useState(1);
+  const [latePage, setLatePage] = useState(1);
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const fetchAll = async () => {
+    try {
+      const [attRes, staffRes, leaveRes] = await Promise.all([
+        fetch('/api/attendance'),
+        fetch('/api/staff'),
+        fetch('/api/leave'),
+      ]);
+      if (attRes.ok) setAttendanceData(await attRes.json());
+      if (staffRes.ok) setStaffList(await staffRes.json());
+      if (leaveRes.ok) setLeaveData(await leaveRes.json());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Overtime chart data — total overtime per day
+  const overtimeChartData = (() => {
+    if (!attendanceData.length) return [];
+    const processed = processAttendanceData(attendanceData);
+
+    const dayMap = new Map<string, number>();
+    processed.forEach((r) => {
+      if (r.overtime_menit > 0) {
+        dayMap.set(r.tanggal_absensi, (dayMap.get(r.tanggal_absensi) ?? 0) + r.overtime_menit);
+      }
+    });
+
+    return Array.from(dayMap.entries())
+      .map(([date, total]) => ({
+        name: date.slice(5), // show "MM-DD"
+        fullDate: date,
+        total,
+      }))
+      .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
+  })();
+
+  // Birthday data sorted by nearest upcoming
+  const birthdayData = (() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return staffList
+      .filter((s) => s.birth_date)
+      .map((s) => {
+        const bd = new Date(s.birth_date!);
+        const thisYear = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
+        const nextBirthday =
+          thisYear < today
+            ? new Date(today.getFullYear() + 1, bd.getMonth(), bd.getDate())
+            : thisYear;
+        const daysUntil = Math.ceil(
+          (nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const age =
+          today.getFullYear() - bd.getFullYear() + (thisYear < today ? 1 : 0);
+        return { ...s, nextBirthday, daysUntil, age };
+      })
+      .sort((a, b) => a.daysUntil - b.daysUntil);
+  })();
+
+  // Leave quota data sorted by least remaining
+  const leaveQuotaData = staffList
+    .map((s) => {
+      const used = leaveData.filter((l) => l.registration_id === s.registration_id).length;
+      const quota = s.leave_quota ?? 12;
+      const remaining = Math.max(0, quota - used);
+      return { ...s, used, quota, remaining };
+    })
+    .sort((a, b) => a.remaining - b.remaining);
+
+  // Top 10 least late
+  const latenessData = (() => {
+    if (!attendanceData.length) return [];
+    const processed = processAttendanceData(attendanceData);
+    const recap = calculateRecap(processed);
+    return recap
+      .map((r) => ({
+        name: r.nama_karyawan,
+        avg: r.average_keterlambatan,
+        count: r.jumlah_keterlambatan,
+      }))
+      .sort((a, b) => a.avg - b.avg)
+      .slice(0, 10);
+  })();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loading size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Welcome back, {userName}!
+        </p>
+      </div>
+
+      {/* TOP: Overtime Chart */}
+      <Card title="Total Overtime per Hari (menit)">
+        {overtimeChartData.length === 0 ? (
+          <div className="text-center py-8 text-sm text-gray-500">
+            No overtime data available
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart
+              data={overtimeChartData}
+              margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 10 }}
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={48}
+              />
+              <YAxis tick={{ fontSize: 11 }} unit=" min" />
+              <Tooltip
+                formatter={(val: number) => [`${val} menit`, 'Total Overtime']}
+                labelFormatter={(label) => {
+                  const item = overtimeChartData.find((d) => d.name === label);
+                  return item ? item.fullDate : label;
+                }}
+                contentStyle={{ fontSize: 12 }}
+              />
+              <Bar dataKey="total" radius={[3, 3, 0, 0]} fill="#6366f1" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </Card>
+
+      {/* BOTTOM 3 SECTIONS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* LEFT: Upcoming Birthdays */}
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-1.5 rounded-md bg-pink-50 dark:bg-pink-900/20">
+              <Cake className="text-pink-500" size={16} />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Upcoming Birthdays
+            </h3>
+          </div>
+
+          {birthdayData.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-4">No birthday data</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {paginate(birthdayData, birthdayPage).map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between py-1.5 border-b border-gray-50 dark:border-gray-700 last:border-0"
+                  >
+                    <div>
+                      <p className="text-xs font-medium text-gray-900 dark:text-white">
+                        {s.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {s.nextBirthday.toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}{' '}
+                        · Usia {s.age}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        s.daysUntil === 0
+                          ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400'
+                          : s.daysUntil <= 7
+                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                      }`}
+                    >
+                      {s.daysUntil === 0 ? '🎂 Today' : `${s.daysUntil}d`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <PaginationBar
+                page={birthdayPage}
+                total={totalPages(birthdayData)}
+                onChange={setBirthdayPage}
+              />
+            </>
+          )}
+        </Card>
+
+        {/* MIDDLE: Leave Quota */}
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20">
+              <FileText className="text-blue-500" size={16} />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Sisa Kuota Cuti
+            </h3>
+          </div>
+
+          {leaveQuotaData.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-4">No data</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {paginate(leaveQuotaData, quotaPage).map((s) => {
+                  const pct = Math.round((s.remaining / s.quota) * 100);
+                  return (
+                    <div
+                      key={s.id}
+                      className="py-1.5 border-b border-gray-50 dark:border-gray-700 last:border-0"
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate max-w-[130px]">
+                          {s.name}
+                        </p>
+                        <span
+                          className={`text-xs font-bold ${
+                            s.remaining <= 2
+                              ? 'text-red-600'
+                              : s.remaining <= 5
+                              ? 'text-orange-500'
+                              : 'text-green-600'
+                          }`}
+                        >
+                          {s.remaining}/{s.quota}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${
+                            s.remaining <= 2
+                              ? 'bg-red-500'
+                              : s.remaining <= 5
+                              ? 'bg-orange-400'
+                              : 'bg-green-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <PaginationBar
+                page={quotaPage}
+                total={totalPages(leaveQuotaData)}
+                onChange={setQuotaPage}
+              />
+            </>
+          )}
+        </Card>
+
+        {/* RIGHT: Top 10 Least Late */}
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-1.5 rounded-md bg-green-50 dark:bg-green-900/20">
+              <Clock className="text-green-500" size={16} />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Top 10 Paling Tepat Waktu
+            </h3>
+          </div>
+
+          {latenessData.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-4">No attendance data</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {paginate(latenessData, latePage).map((item, idx) => {
+                  const rank = (latePage - 1) * PAGE_SIZE + idx + 1;
+                  return (
+                    <div
+                      key={item.name}
+                      className="flex items-center gap-2 py-1.5 border-b border-gray-50 dark:border-gray-700 last:border-0"
+                    >
+                      <span
+                        className={`w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold flex-shrink-0 ${
+                          rank === 1
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : rank === 2
+                            ? 'bg-gray-100 text-gray-600'
+                            : rank === 3
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-gray-50 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                        }`}
+                      >
+                        {rank}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                          {item.name}
+                        </p>
+                        <p className="text-xs text-gray-500">{item.count}x terlambat</p>
+                      </div>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          item.avg === 0
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                        }`}
+                      >
+                        {item.avg === 0 ? '✓ 0 min' : `${item.avg} min`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <PaginationBar
+                page={latePage}
+                total={totalPages(latenessData)}
+                onChange={setLatePage}
+              />
+            </>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}

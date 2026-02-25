@@ -53,7 +53,7 @@ export interface AttendanceRecord {
 
 export interface AttendanceRecap {
   nama_karyawan: string;
-  jumlah_hadir: number; // NEW: Total hari hadir
+  jumlah_hadir: number;
   jumlah_keterlambatan: number;
   total_keterlambatan_menit: number;
   average_keterlambatan: number;
@@ -80,6 +80,8 @@ export interface StaffList {
   id: string;
   registration_id: string;
   name: string;
+  birth_date?: string;
+  leave_quota?: number;
 }
 
 // Session Types

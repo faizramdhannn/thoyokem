@@ -22,6 +22,8 @@ export async function GET() {
       id: row[0] || '',
       registration_id: row[1] || '',
       name: row[2] || '',
+      birth_date: row[3] || '',
+      leave_quota: row[4] ? parseInt(row[4]) : 12,
     }));
 
     return NextResponse.json(staff);

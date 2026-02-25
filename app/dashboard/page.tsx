@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from '@/lib/auth';
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import Card from "@/components/ui/Card";
+import DashboardContent from "./DashboardContent";
 import { AlertCircle } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -48,24 +48,7 @@ export default async function DashboardPage() {
         permissions: session.user.permissions,
       }}
     >
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Dashboard
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Welcome back, {session.user.name}!
-          </p>
-        </div>
-
-        <Card>
-          <div className="text-center py-12">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Dashboard content coming soon...
-            </p>
-          </div>
-        </Card>
-      </div>
+      <DashboardContent userName={session.user.name ?? ""} />
     </DashboardLayout>
   );
 }
