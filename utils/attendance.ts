@@ -3,7 +3,9 @@ import * as XLSX from 'xlsx';
 
 interface ProcessedDay {
   masuk?: string;
+  masukTarget?: string;
   pulang?: string;
+  pulangTarget?: string;
 }
 
 export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRecord[] {
@@ -21,11 +23,13 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
     }
 
     const dayRecord = dateMap.get(record.tanggal_absensi)!;
-    
+
     if (record.tipe_absensi === 'Absensi Masuk') {
       dayRecord.masuk = record.jam_absensi;
+      dayRecord.masukTarget = record.jam_set;
     } else if (record.tipe_absensi === 'Absensi Pulang') {
       dayRecord.pulang = record.jam_absensi;
+      dayRecord.pulangTarget = record.jam_set;
     }
   });
 
@@ -45,8 +49,8 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
 
     if (existingRecord) return;
 
-    const jamMasukTarget = '08:00';
-    const jamPulangTarget = '17:00';
+    const jamMasukTarget = dayRecord.masukTarget || '08:00';
+    const jamPulangTarget = dayRecord.pulangTarget || '17:00';
 
     let jamMasukActual = '';
     let keterlambatanMenit = 0;
@@ -60,7 +64,7 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
       jamMasukActual = dayRecord.masuk;
       const targetMinutes = timeToMinutes(jamMasukTarget);
       const actualMinutes = timeToMinutes(jamMasukActual);
-      
+
       if (actualMinutes > targetMinutes) {
         keterlambatanMenit = actualMinutes - targetMinutes;
         keteranganMasuk = 'Terlambat';
@@ -73,7 +77,7 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
       jamPulangActual = dayRecord.pulang;
       const targetMinutes = timeToMinutes(jamPulangTarget);
       const actualMinutes = timeToMinutes(jamPulangActual);
-      
+
       if (actualMinutes > targetMinutes) {
         overtimeMenit = actualMinutes - targetMinutes;
         keteranganPulang = 'Overtime';
@@ -123,14 +127,13 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
     }
 
     const empData = employeeMap.get(record.nama)!;
-    
-    // Count unique attendance dates
+
     empData.uniqueDates.add(record.tanggal_absensi);
-    
+
     if (record.keterlambatan_menit > 0) {
       empData.keterlambatan.push(record.keterlambatan_menit);
     }
-    
+
     if (record.overtime_menit > 0) {
       empData.overtime.push(record.overtime_menit);
     }
@@ -147,7 +150,7 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
       jumlah_hadir: data.uniqueDates.size,
       jumlah_keterlambatan: data.keterlambatan.length,
       total_keterlambatan_menit: totalKeterlambatan,
-      average_keterlambatan: data.keterlambatan.length > 0 
+      average_keterlambatan: data.keterlambatan.length > 0
         ? Math.round(totalKeterlambatan / data.keterlambatan.length)
         : 0,
       jumlah_overtime: data.overtime.length,
@@ -162,34 +165,32 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
 }
 
 /**
- * Convert time string to minutes
- * Supports multiple formats:
- * - Standard: "17:00" or "17.00" → 1020 minutes
- * - Excel decimal: "0.7083333333" → 1020 minutes (17:00)
- * - Excel decimal: "0.3409722222" → 490 minutes (08:10)
+ * Convert time string to minutes.
+ * Supports:
+ * - Standard:     "08:00" or "8:00"  → 480
+ * - Dot separator: "8.00"            → 480
+ * - Excel decimal: "0.3333"          → 480 (08:00)
  */
 function timeToMinutes(time: string): number {
   if (!time || time.trim() === '') return 0;
-  
+
   const trimmedTime = time.trim();
-  
-  // Check if it's Excel decimal format (starts with 0. and less than 1)
-  if (trimmedTime.startsWith('0.')) {
+
+  // Excel decimal format (e.g. "0.7083333333")
+  if (/^0\.\d+$/.test(trimmedTime)) {
     const decimalValue = parseFloat(trimmedTime);
-    if (!isNaN(decimalValue) && decimalValue < 1) {
-      // Convert decimal to total minutes (1 day = 1440 minutes)
+    if (!isNaN(decimalValue)) {
       return Math.round(decimalValue * 1440);
     }
   }
-  
-  // Handle standard format with ':' or '.'
-  // First, normalize the separator: replace first '.' with ':'
+
+  // Normalize dot separator to colon (e.g. "8.00" → "8:00")
   let normalizedTime = trimmedTime;
   const dotIndex = trimmedTime.indexOf('.');
-  if (dotIndex > 0 && dotIndex < 3) { // Only replace if it's a time separator (e.g., "17.00")
+  if (dotIndex > 0 && dotIndex <= 2) {
     normalizedTime = trimmedTime.substring(0, dotIndex) + ':' + trimmedTime.substring(dotIndex + 1);
   }
-  
+
   const parts = normalizedTime.split(':');
   if (parts.length >= 2) {
     const hours = parseInt(parts[0], 10);
@@ -198,7 +199,7 @@ function timeToMinutes(time: string): number {
       return hours * 60 + minutes;
     }
   }
-  
+
   return 0;
 }
 
@@ -221,7 +222,7 @@ export function exportToXLSX(records: AttendanceRecord[]): void {
   const worksheet = XLSX.utils.json_to_sheet(exportData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Report');
-  
+
   XLSX.writeFile(workbook, `attendance_report_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
@@ -240,6 +241,6 @@ export function exportRecapToXLSX(recap: AttendanceRecap[]): void {
   const worksheet = XLSX.utils.json_to_sheet(exportData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Recap');
-  
+
   XLSX.writeFile(workbook, `attendance_recap_${new Date().toISOString().split('T')[0]}.xlsx`);
 }

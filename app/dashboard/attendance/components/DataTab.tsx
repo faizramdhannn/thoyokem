@@ -63,6 +63,7 @@ export default function DataTab() {
       'ID': item.id,
       'Nama': item.nama,
       'Tanggal Absensi': item.tanggal_absensi,
+      'Jam Set': item.jam_set,
       'Jam Absensi': item.jam_absensi,
       'Verifikasi': item.verifikasi,
       'Tipe Absensi': item.tipe_absensi,

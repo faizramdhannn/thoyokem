@@ -94,6 +94,7 @@ export default function ImportTab() {
             id: row['ID'] || '',
             nama: row['Nama'] || '',
             tanggal_absensi: row['Tanggal Absensi'] || '',
+            jam_set: row['Jam Set'] || '',
             jam_absensi: row['Jam Absensi'] || '',
             verifikasi: row['Verifikasi'] || '',
             tipe_absensi: row['Tipe Absensi'] || '',

@@ -18,17 +18,18 @@ export async function GET() {
       return NextResponse.json([]);
     }
 
-    const attendance: AttendanceImport[] = rows.slice(1).map((row) => ({
-      cloud_id: row[0] || '',
-      id: row[1] || '',
-      nama: row[2] || '',
-      tanggal_absensi: row[3] || '',
-      jam_absensi: row[4] || '',
-      verifikasi: row[5] || '',
-      tipe_absensi: row[6] || '',
-      jabatan: row[7] || '',
-      kantor: row[8] || '',
-    }));
+const attendance: AttendanceImport[] = rows.slice(1).map((row) => ({
+  cloud_id: row[0] || '',
+  id: row[1] || '',
+  nama: row[2] || '',
+  tanggal_absensi: row[3] || '',
+  jam_set: row[4] || '',
+  jam_absensi: row[5] || '',
+  verifikasi: row[6] || '',
+  tipe_absensi: row[7] || '',
+  jabatan: row[8] || '',
+  kantor: row[9] || '',
+}));
 
     return NextResponse.json(attendance);
   } catch (error) {
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
         item.id,
         item.nama,
         item.tanggal_absensi,
+        item.jam_set,
         item.jam_absensi,
         item.verifikasi,
         item.tipe_absensi,

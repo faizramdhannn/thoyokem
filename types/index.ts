@@ -28,6 +28,7 @@ export interface AttendanceImport {
   id: string;
   nama: string;
   tanggal_absensi: string;
+  jam_set: string;
   jam_absensi: string;
   verifikasi: string;
   tipe_absensi: string;
