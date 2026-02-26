@@ -10,6 +10,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Attendance Dashboard',
   description: 'Manage employee attendance and leaves',
+  icons: {
+    icon: '/Logo-Thoyokem.png',
+    apple: '/Logo-Thoyokem.png',
+  },
 };
 
 export default async function RootLayout({
@@ -21,6 +25,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/Logo-Thoyokem.png" type="image/png" />
+      </head>
       <body className={inter.className}>
         <AuthProvider session={session}>
           {children}
