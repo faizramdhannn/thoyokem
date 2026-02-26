@@ -64,7 +64,11 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
   const [staffList, setStaffList] = useState<StaffList[]>([]);
   const [leaveData, setLeaveData] = useState<LeaveAttendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [overtimeView, setOvertimeView] = useState<'daily' | 'users'>('daily');
+
+  // Chart mode: overtime or keterlambatan
+  const [chartMode, setChartMode] = useState<'overtime' | 'keterlambatan'>('overtime');
+  // Sub-view: daily or per user
+  const [chartView, setChartView] = useState<'daily' | 'users'>('daily');
 
   const [birthdayPage, setBirthdayPage] = useState(1);
   const [quotaPage, setQuotaPage] = useState(1);
@@ -91,48 +95,62 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
     }
   };
 
-  // Overtime chart data — total overtime per day
-  const overtimeDailyData = (() => {
-    if (!attendanceData.length) return [];
-    const processed = processAttendanceData(attendanceData);
+  const processed = attendanceData.length ? processAttendanceData(attendanceData) : [];
+  const recap = processed.length ? calculateRecap(processed) : [];
 
+  // --- Overtime data ---
+  const overtimeDailyData = (() => {
     const dayMap = new Map<string, number>();
     processed.forEach((r) => {
       if (r.overtime_menit > 0) {
         dayMap.set(r.tanggal_absensi, (dayMap.get(r.tanggal_absensi) ?? 0) + r.overtime_menit);
       }
     });
-
     return Array.from(dayMap.entries())
-      .map(([date, total]) => ({
-        name: date.slice(5),
-        fullDate: date,
-        total,
-      }))
+      .map(([date, total]) => ({ name: date.slice(5), fullDate: date, total }))
       .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
   })();
 
-  // Overtime chart data — total overtime per user
-  const overtimeUsersData = (() => {
-    if (!attendanceData.length) return [];
-    const processed = processAttendanceData(attendanceData);
-    const recap = calculateRecap(processed);
-    return recap
-      .filter((r) => r.total_overtime_menit > 0)
-      .map((r) => ({
-        name: toTitleCase(r.nama_karyawan),
-        total: r.total_overtime_menit,
-      }))
-      .sort((a, b) => b.total - a.total);
+  const overtimeUsersData = recap
+    .filter((r) => r.total_overtime_menit > 0)
+    .map((r) => ({ name: toTitleCase(r.nama_karyawan), total: r.total_overtime_menit }))
+    .sort((a, b) => b.total - a.total);
+
+  // --- Keterlambatan data ---
+  const keterlambatanDailyData = (() => {
+    const dayMap = new Map<string, number>();
+    processed.forEach((r) => {
+      if (r.keterlambatan_menit > 0) {
+        dayMap.set(r.tanggal_absensi, (dayMap.get(r.tanggal_absensi) ?? 0) + r.keterlambatan_menit);
+      }
+    });
+    return Array.from(dayMap.entries())
+      .map(([date, total]) => ({ name: date.slice(5), fullDate: date, total }))
+      .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
   })();
 
-  const overtimeChartData = overtimeView === 'daily' ? overtimeDailyData : overtimeUsersData;
+  const keterlambatanUsersData = recap
+    .filter((r) => r.total_keterlambatan_menit > 0)
+    .map((r) => ({ name: toTitleCase(r.nama_karyawan), total: r.total_keterlambatan_menit }))
+    .sort((a, b) => b.total - a.total);
 
-  // Birthday data sorted by nearest upcoming
+  // Active chart data
+  const activeData = chartMode === 'overtime'
+    ? (chartView === 'daily' ? overtimeDailyData : overtimeUsersData)
+    : (chartView === 'daily' ? keterlambatanDailyData : keterlambatanUsersData);
+
+  const chartColor = chartMode === 'overtime' ? '#6366f1' : '#ef4444';
+
+  const chartTitle = chartMode === 'overtime'
+    ? `Total Overtime ${chartView === 'daily' ? 'per Hari' : 'per Orang'} (menit)`
+    : `Total Keterlambatan ${chartView === 'daily' ? 'per Hari' : 'per Orang'} (menit)`;
+
+  const tooltipLabel = chartMode === 'overtime' ? 'Total Overtime' : 'Total Keterlambatan';
+
+  // Birthday data
   const birthdayData = (() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     return staffList
       .filter((s) => s.birth_date)
       .map((s) => {
@@ -145,14 +163,13 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
         const daysUntil = Math.ceil(
           (nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
-        const age =
-          today.getFullYear() - bd.getFullYear() + (thisYear < today ? 1 : 0);
+        const age = today.getFullYear() - bd.getFullYear() + (thisYear < today ? 1 : 0);
         return { ...s, nextBirthday, daysUntil, age };
       })
       .sort((a, b) => a.daysUntil - b.daysUntil);
   })();
 
-  // Leave quota data sorted by least remaining
+  // Leave quota data
   const leaveQuotaData = staffList
     .map((s) => {
       const used = leaveData.filter((l) => l.registration_id === s.registration_id).length;
@@ -163,19 +180,14 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
     .sort((a, b) => a.remaining - b.remaining);
 
   // Top 10 least late
-  const latenessData = (() => {
-    if (!attendanceData.length) return [];
-    const processed = processAttendanceData(attendanceData);
-    const recap = calculateRecap(processed);
-    return recap
-      .map((r) => ({
-        name: toTitleCase(r.nama_karyawan),
-        avg: r.average_keterlambatan,
-        count: r.jumlah_keterlambatan,
-      }))
-      .sort((a, b) => a.avg - b.avg)
-      .slice(0, 10);
-  })();
+  const latenessData = recap
+    .map((r) => ({
+      name: toTitleCase(r.nama_karyawan),
+      avg: r.average_keterlambatan,
+      count: r.jumlah_keterlambatan,
+    }))
+    .sort((a, b) => a.avg - b.avg)
+    .slice(0, 10);
 
   if (isLoading) {
     return (
@@ -194,43 +206,71 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
         </p>
       </div>
 
-      {/* TOP: Overtime Chart */}
+      {/* TOP: Chart */}
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            Total Overtime {overtimeView === 'daily' ? 'per Hari' : 'per Orang'} (menit)
+            {chartTitle}
           </h3>
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
-            <button
-              onClick={() => setOvertimeView('daily')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                overtimeView === 'daily'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Daily
-            </button>
-            <button
-              onClick={() => setOvertimeView('users')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                overtimeView === 'users'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Users
-            </button>
+          <div className="flex items-center gap-2">
+            {/* Overtime / Keterlambatan toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
+              <button
+                onClick={() => setChartMode('overtime')}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  chartMode === 'overtime'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                Overtime
+              </button>
+              <button
+                onClick={() => setChartMode('keterlambatan')}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  chartMode === 'keterlambatan'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                Keterlambatan
+              </button>
+            </div>
+
+            {/* Daily / Users toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
+              <button
+                onClick={() => setChartView('daily')}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  chartView === 'daily'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                Daily
+              </button>
+              <button
+                onClick={() => setChartView('users')}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                  chartView === 'users'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                Users
+              </button>
+            </div>
           </div>
         </div>
-        {overtimeChartData.length === 0 ? (
+
+        {activeData.length === 0 ? (
           <div className="text-center py-8 text-sm text-gray-500">
-            No overtime data available
+            No data available
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <BarChart
-              data={overtimeChartData}
+              data={activeData}
               margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -244,17 +284,17 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
               />
               <YAxis tick={{ fontSize: 11 }} unit=" min" />
               <Tooltip
-                formatter={(val: number) => [`${val} menit`, 'Total Overtime']}
+                formatter={(val: number) => [`${val} menit`, tooltipLabel]}
                 labelFormatter={(label) => {
-                  if (overtimeView === 'daily') {
-                    const item = overtimeDailyData.find((d) => d.name === label);
-                    return item ? item.fullDate : label;
+                  if (chartView === 'daily') {
+                    const item = activeData.find((d) => d.name === label);
+                    return (item as any)?.fullDate ?? label;
                   }
                   return label;
                 }}
-                contentStyle={{ fontSize: 12 }}
+                contentStyle={{ fontSize: 12, color: '#111827' }}
               />
-              <Bar dataKey="total" radius={[3, 3, 0, 0]} fill="#6366f1" />
+              <Bar dataKey="total" radius={[3, 3, 0, 0]} fill={chartColor} />
             </BarChart>
           </ResponsiveContainer>
         )}
