@@ -8,8 +8,8 @@ import AuthProvider from '@/components/AuthProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Attendance Dashboard',
-  description: 'Manage employee attendance and leaves',
+  title: 'Thoyokem',
+  description: 'Manage employee for HR',
   icons: {
     icon: '/Logo-Thoyokem.png',
     apple: '/Logo-Thoyokem.png',
