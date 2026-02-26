@@ -16,6 +16,15 @@ interface DashboardContentProps {
 
 const PAGE_SIZE = 10;
 
+function toTitleCase(str: string): string {
+  if (!str) return str;
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 function PaginationBar({
   page, total, onChange,
 }: { page: number; total: number; onChange: (p: number) => void }) {
@@ -55,6 +64,7 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
   const [staffList, setStaffList] = useState<StaffList[]>([]);
   const [leaveData, setLeaveData] = useState<LeaveAttendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [overtimeView, setOvertimeView] = useState<'daily' | 'users'>('daily');
 
   const [birthdayPage, setBirthdayPage] = useState(1);
   const [quotaPage, setQuotaPage] = useState(1);
@@ -82,7 +92,7 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
   };
 
   // Overtime chart data — total overtime per day
-  const overtimeChartData = (() => {
+  const overtimeDailyData = (() => {
     if (!attendanceData.length) return [];
     const processed = processAttendanceData(attendanceData);
 
@@ -95,12 +105,28 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
 
     return Array.from(dayMap.entries())
       .map(([date, total]) => ({
-        name: date.slice(5), // show "MM-DD"
+        name: date.slice(5),
         fullDate: date,
         total,
       }))
       .sort((a, b) => a.fullDate.localeCompare(b.fullDate));
   })();
+
+  // Overtime chart data — total overtime per user
+  const overtimeUsersData = (() => {
+    if (!attendanceData.length) return [];
+    const processed = processAttendanceData(attendanceData);
+    const recap = calculateRecap(processed);
+    return recap
+      .filter((r) => r.total_overtime_menit > 0)
+      .map((r) => ({
+        name: toTitleCase(r.nama_karyawan),
+        total: r.total_overtime_menit,
+      }))
+      .sort((a, b) => b.total - a.total);
+  })();
+
+  const overtimeChartData = overtimeView === 'daily' ? overtimeDailyData : overtimeUsersData;
 
   // Birthday data sorted by nearest upcoming
   const birthdayData = (() => {
@@ -143,7 +169,7 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
     const recap = calculateRecap(processed);
     return recap
       .map((r) => ({
-        name: r.nama_karyawan,
+        name: toTitleCase(r.nama_karyawan),
         avg: r.average_keterlambatan,
         count: r.jumlah_keterlambatan,
       }))
@@ -169,7 +195,34 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
       </div>
 
       {/* TOP: Overtime Chart */}
-      <Card title="Total Overtime per Hari (menit)">
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            Total Overtime {overtimeView === 'daily' ? 'per Hari' : 'per Orang'} (menit)
+          </h3>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
+            <button
+              onClick={() => setOvertimeView('daily')}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                overtimeView === 'daily'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Daily
+            </button>
+            <button
+              onClick={() => setOvertimeView('users')}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                overtimeView === 'users'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Users
+            </button>
+          </div>
+        </div>
         {overtimeChartData.length === 0 ? (
           <div className="text-center py-8 text-sm text-gray-500">
             No overtime data available
@@ -193,8 +246,11 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
               <Tooltip
                 formatter={(val: number) => [`${val} menit`, 'Total Overtime']}
                 labelFormatter={(label) => {
-                  const item = overtimeChartData.find((d) => d.name === label);
-                  return item ? item.fullDate : label;
+                  if (overtimeView === 'daily') {
+                    const item = overtimeDailyData.find((d) => d.name === label);
+                    return item ? item.fullDate : label;
+                  }
+                  return label;
                 }}
                 contentStyle={{ fontSize: 12 }}
               />
@@ -230,7 +286,7 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
                   >
                     <div>
                       <p className="text-xs font-medium text-gray-900 dark:text-white">
-                        {s.name}
+                        {toTitleCase(s.name)}
                       </p>
                       <p className="text-xs text-gray-500">
                         {s.nextBirthday.toLocaleDateString('id-ID', {
@@ -288,7 +344,7 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
                     >
                       <div className="flex justify-between items-center mb-1">
                         <p className="text-xs font-medium text-gray-900 dark:text-white truncate max-w-[130px]">
-                          {s.name}
+                          {toTitleCase(s.name)}
                         </p>
                         <span
                           className={`text-xs font-bold ${
