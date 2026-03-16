@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
 import Loading from '@/components/ui/Loading';
 import { AttendanceImport, StaffList, LeaveAttendance } from '@/types';
-import { processAttendanceData, calculateRecap } from '@/utils/attendance';
+import { processAttendanceData, calculateRecap, countUsedLeaveDays } from '@/utils/attendance';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -169,10 +169,10 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
       .sort((a, b) => a.daysUntil - b.daysUntil);
   })();
 
-  // Leave quota data
+  // Leave quota data — FIX: hitung total hari (inklusif) bukan jumlah record
   const leaveQuotaData = staffList
     .map((s) => {
-      const used = leaveData.filter((l) => l.registration_id === s.registration_id).length;
+      const used = countUsedLeaveDays(leaveData, s.registration_id);
       const quota = s.leave_quota ?? 12;
       const remaining = Math.max(0, quota - used);
       return { ...s, used, quota, remaining };

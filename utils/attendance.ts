@@ -1,5 +1,30 @@
-import { AttendanceImport, AttendanceRecord, AttendanceRecap } from '@/types';
+import { AttendanceImport, AttendanceRecord, AttendanceRecap, LeaveAttendance } from '@/types';
 import * as XLSX from 'xlsx';
+
+/**
+ * Hitung jumlah hari cuti dari date_from sampai date_end (inklusif).
+ * Contoh: 26 Mar - 27 Mar = 2 hari
+ */
+export function countLeaveDays(leave: LeaveAttendance): number {
+  if (!leave.date_from || !leave.date_end) return 1;
+  const from = new Date(leave.date_from);
+  const end = new Date(leave.date_end);
+  if (isNaN(from.getTime()) || isNaN(end.getTime())) return 1;
+  const diffMs = end.getTime() - from.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1; // inklusif
+}
+
+/**
+ * Hitung total hari cuti yang sudah dipakai oleh seorang karyawan.
+ */
+export function countUsedLeaveDays(
+  leaveData: LeaveAttendance[],
+  registrationId: string
+): number {
+  return leaveData
+    .filter((l) => l.registration_id === registrationId)
+    .reduce((sum, l) => sum + countLeaveDays(l), 0);
+}
 
 interface ProcessedDay {
   masuk?: string;
