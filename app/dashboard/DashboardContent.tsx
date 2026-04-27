@@ -8,7 +8,7 @@ import { processAttendanceData, calculateRecap, countUsedLeaveDays } from '@/uti
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { ChevronLeft, ChevronRight, Cake, FileText, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Cake, FileText, Clock, Users } from 'lucide-react';
 
 interface DashboardContentProps {
   userName: string;
@@ -73,6 +73,10 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
   const [birthdayPage, setBirthdayPage] = useState(1);
   const [quotaPage, setQuotaPage] = useState(1);
   const [latePage, setLatePage] = useState(1);
+  const [absenPage, setAbsenPage] = useState(1);
+
+  // Absen sort
+  const [absenSort, setAbsenSort] = useState<'desc' | 'asc'>('desc');
 
   useEffect(() => {
     fetchAll();
@@ -169,7 +173,7 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
       .sort((a, b) => a.daysUntil - b.daysUntil);
   })();
 
-  // Leave quota data — FIX: hitung total hari (inklusif) bukan jumlah record
+  // Leave quota data
   const leaveQuotaData = staffList
     .map((s) => {
       const used = countUsedLeaveDays(leaveData, s.registration_id);
@@ -188,6 +192,14 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
     }))
     .sort((a, b) => a.avg - b.avg)
     .slice(0, 10);
+
+  // Jumlah absen per orang
+  const absenPerOrangData = recap
+    .map((r) => ({
+      name: toTitleCase(r.nama_karyawan),
+      jumlah: r.jumlah_hadir,
+    }))
+    .sort((a, b) => absenSort === 'desc' ? b.jumlah - a.jumlah : a.jumlah - b.jumlah);
 
   if (isLoading) {
     return (
@@ -213,7 +225,6 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
             {chartTitle}
           </h3>
           <div className="flex items-center gap-2">
-            {/* Overtime / Keterlambatan toggle */}
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
               <button
                 onClick={() => setChartMode('overtime')}
@@ -237,7 +248,6 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
               </button>
             </div>
 
-            {/* Daily / Users toggle */}
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
               <button
                 onClick={() => setChartView('daily')}
@@ -264,24 +274,12 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
         </div>
 
         {activeData.length === 0 ? (
-          <div className="text-center py-8 text-sm text-gray-500">
-            No data available
-          </div>
+          <div className="text-center py-8 text-sm text-gray-500">No data available</div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart
-              data={activeData}
-              margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
-            >
+            <BarChart data={activeData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 10 }}
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={48}
-              />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={48} />
               <YAxis tick={{ fontSize: 11 }} unit=" min" />
               <Tooltip
                 formatter={(val: number) => [`${val} menit`, tooltipLabel]}
@@ -297,6 +295,80 @@ export default function DashboardContent({ userName }: DashboardContentProps) {
               <Bar dataKey="total" radius={[3, 3, 0, 0]} fill={chartColor} />
             </BarChart>
           </ResponsiveContainer>
+        )}
+      </Card>
+
+      {/* Jumlah Absen Per Orang - full width */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-indigo-50 dark:bg-indigo-900/20">
+              <Users className="text-indigo-500" size={16} />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Jumlah Absen Per Orang
+            </h3>
+            <span className="text-xs text-gray-400">({absenPerOrangData.length} karyawan)</span>
+          </div>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
+            <button
+              onClick={() => { setAbsenSort('desc'); setAbsenPage(1); }}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                absenSort === 'desc'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Terbanyak
+            </button>
+            <button
+              onClick={() => { setAbsenSort('asc'); setAbsenPage(1); }}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                absenSort === 'asc'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Tersedikit
+            </button>
+          </div>
+        </div>
+
+        {absenPerOrangData.length === 0 ? (
+          <p className="text-xs text-gray-500 text-center py-4">No attendance data</p>
+        ) : (
+          <>
+            {/* Bar visualization */}
+            <div className="space-y-2">
+              {paginate(absenPerOrangData, absenPage).map((item, idx) => {
+                const rank = (absenPage - 1) * PAGE_SIZE + idx + 1;
+                const maxJumlah = absenPerOrangData[0]?.jumlah || 1;
+                const pct = Math.round((item.jumlah / maxJumlah) * 100);
+                return (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 w-5 text-right flex-shrink-0">{rank}</span>
+                    <p className="text-xs font-medium text-gray-900 dark:text-white w-36 truncate flex-shrink-0">
+                      {item.name}
+                    </p>
+                    <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full bg-indigo-500 transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 w-14 text-right flex-shrink-0">
+                      {item.jumlah} hari
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <PaginationBar
+              page={absenPage}
+              total={totalPages(absenPerOrangData)}
+              onChange={setAbsenPage}
+            />
+          </>
         )}
       </Card>
 

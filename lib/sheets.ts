@@ -72,6 +72,47 @@ export async function appendSheet(sheetName: string, values: any[][]) {
   }
 }
 
+/**
+ * Clear all data rows (keep header row) then write new data.
+ * Used for replacing attendance import data entirely.
+ */
+export async function clearAndWriteSheet(sheetName: string, values: any[][]) {
+  try {
+    const sheets = await getGoogleSheetsClient();
+
+    // Read existing data to get header row
+    const existing = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: sheetName,
+    });
+
+    const existingRows = existing.data.values || [];
+    const headerRow = existingRows.length > 0 ? existingRows[0] : [];
+
+    // Clear entire sheet
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: sheetName,
+    });
+
+    // Write header + new data
+    const allRows = [headerRow, ...values];
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: `${sheetName}!A1`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: allRows,
+      },
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error clearing and writing sheet:', error);
+    throw error;
+  }
+}
+
 export async function deleteRow(sheetName: string, rowIndex: number) {
   try {
     const sheets = await getGoogleSheetsClient();

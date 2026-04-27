@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { readSheet, appendSheet } from '@/lib/sheets';
+import { readSheet, clearAndWriteSheet } from '@/lib/sheets';
 import { AttendanceImport } from '@/types';
 
 export async function GET() {
@@ -18,18 +18,18 @@ export async function GET() {
       return NextResponse.json([]);
     }
 
-const attendance: AttendanceImport[] = rows.slice(1).map((row) => ({
-  cloud_id: row[0] || '',
-  id: row[1] || '',
-  nama: row[2] || '',
-  tanggal_absensi: row[3] || '',
-  jam_set: row[4] || '',
-  jam_absensi: row[5] || '',
-  verifikasi: row[6] || '',
-  tipe_absensi: row[7] || '',
-  jabatan: row[8] || '',
-  kantor: row[9] || '',
-}));
+    const attendance: AttendanceImport[] = rows.slice(1).map((row) => ({
+      cloud_id: row[0] || '',
+      id: row[1] || '',
+      nama: row[2] || '',
+      tanggal_absensi: row[3] || '',
+      jam_set: row[4] || '',
+      jam_absensi: row[5] || '',
+      verifikasi: row[6] || '',
+      tipe_absensi: row[7] || '',
+      jabatan: row[8] || '',
+      kantor: row[9] || '',
+    }));
 
     return NextResponse.json(attendance);
   } catch (error) {
@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
         item.kantor,
       ]);
 
-      await appendSheet('attendance_import', values);
+      // Replace all existing data with new import (clear old data first)
+      await clearAndWriteSheet('attendance_import', values);
 
       return NextResponse.json({ success: true, count: values.length });
     }
