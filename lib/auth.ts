@@ -11,9 +11,8 @@ export async function updateLastActive(userId: string) {
     if (rowIndex === -1) return;
 
     const now = new Date().toISOString();
-    rows[rowIndex][9] = now; // column J = last_active
-
-    await writeSheet('users', `J${rowIndex + 1}`, [[now]]);
+    rows[rowIndex][10] = now;
+    await writeSheet('users', `K${rowIndex + 1}`, [[now]]);
   } catch (error) {
     // Non-blocking: log but don't throw
     console.error('Failed to update last_active:', error);
@@ -57,7 +56,7 @@ export const authOptions: NextAuthOptions = {
           const rowIndex = rows.findIndex((row, i) => i > 0 && row[0] === user[0]);
           if (rowIndex !== -1) {
             const now = new Date().toISOString();
-            await writeSheet('users', `J${rowIndex + 1}`, [[now]]);
+            await writeSheet('users', `K${rowIndex + 1}`, [[now]]);
           }
 
           return {

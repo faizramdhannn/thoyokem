@@ -47,28 +47,69 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
-    
-    if (Array.isArray(data)) {
-      const values = data.map((item: AttendanceImport) => [
-        item.cloud_id,
-        item.id,
-        item.nama,
-        item.tanggal_absensi,
-        item.jam_set,
-        item.jam_absensi,
-        item.verifikasi,
-        item.tipe_absensi,
-        item.jabatan,
-        item.kantor,
-      ]);
 
-      // Replace all existing data with new import (clear old data first)
-      await clearAndWriteSheet('attendance_import', values);
-
-      return NextResponse.json({ success: true, count: values.length });
+    if (!Array.isArray(data)) {
+      return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
     }
 
-    return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
+    // Dates in the new import
+    const incomingDates = new Set<string>(
+      data.map((item: AttendanceImport) => item.tanggal_absensi).filter(Boolean)
+    );
+
+    // Read existing data
+    const rows = await readSheet('attendance_import');
+    const existingData: AttendanceImport[] = rows && rows.length > 1
+      ? rows.slice(1).map((row) => ({
+          cloud_id: row[0] || '',
+          id: row[1] || '',
+          nama: row[2] || '',
+          tanggal_absensi: row[3] || '',
+          jam_set: row[4] || '',
+          jam_absensi: row[5] || '',
+          verifikasi: row[6] || '',
+          tipe_absensi: row[7] || '',
+          jabatan: row[8] || '',
+          kantor: row[9] || '',
+        }))
+      : [];
+
+    // Keep existing rows whose dates are NOT in the incoming data
+    const preserved = existingData.filter(
+      (item) => !incomingDates.has(item.tanggal_absensi)
+    );
+
+    // Merge: preserved old data + new data
+    const merged = [...preserved, ...data];
+
+    // Sort by tanggal_absensi then nama for cleanliness
+    merged.sort((a, b) => {
+      const dateCmp = a.tanggal_absensi.localeCompare(b.tanggal_absensi);
+      return dateCmp !== 0 ? dateCmp : a.nama.localeCompare(b.nama);
+    });
+
+    const values = merged.map((item: AttendanceImport) => [
+      item.cloud_id,
+      item.id,
+      item.nama,
+      item.tanggal_absensi,
+      item.jam_set,
+      item.jam_absensi,
+      item.verifikasi,
+      item.tipe_absensi,
+      item.jabatan,
+      item.kantor,
+    ]);
+
+    await clearAndWriteSheet('attendance_import', values);
+
+    return NextResponse.json({
+      success: true,
+      count: data.length,
+      preserved: preserved.length,
+      total: merged.length,
+      dates_replaced: Array.from(incomingDates).sort(),
+    });
   } catch (error) {
     console.error('Error importing attendance:', error);
     return NextResponse.json({ error: 'Failed to import attendance data' }, { status: 500 });
