@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, updateLastActive } from '@/lib/auth';
 import { readSheet, appendSheet, writeSheet, deleteRow } from '@/lib/sheets';
 import { LeaveAttendance } from '@/types';
 
@@ -11,6 +11,14 @@ export async function GET() {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Check leave permission
+    if (!session.user.permissions.leave) {
+      return NextResponse.json({ error: 'Forbidden: no leave access' }, { status: 403 });
+    }
+
+    // Update last_active (non-blocking)
+    updateLastActive(session.user.id);
 
     const rows = await readSheet('leave_attendance');
 
@@ -44,6 +52,12 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    if (!session.user.permissions.leave) {
+      return NextResponse.json({ error: 'Forbidden: no leave access' }, { status: 403 });
+    }
+
+    updateLastActive(session.user.id);
 
     const data = await request.json();
     const rows = await readSheet('leave_attendance');
@@ -79,6 +93,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!session.user.permissions.leave) {
+      return NextResponse.json({ error: 'Forbidden: no leave access' }, { status: 403 });
+    }
+
+    updateLastActive(session.user.id);
+
     const data = await request.json();
     const { id, ...updates } = data;
 
@@ -112,6 +132,12 @@ export async function DELETE(request: NextRequest) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    if (!session.user.permissions.leave) {
+      return NextResponse.json({ error: 'Forbidden: no leave access' }, { status: 403 });
+    }
+
+    updateLastActive(session.user.id);
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

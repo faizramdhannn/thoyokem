@@ -7,8 +7,10 @@ export interface User {
   role: string;
   dashboard: boolean;
   attendance: boolean;
+  leave: boolean;           // NEW
   registration_request: boolean;
   setting: boolean;
+  last_active?: string;     // NEW
 }
 
 // Registration Types
@@ -93,6 +95,7 @@ export interface SessionUser {
   permissions: {
     dashboard: boolean;
     attendance: boolean;
+    leave: boolean;           // NEW
     registration_request: boolean;
     setting: boolean;
   };

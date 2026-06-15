@@ -7,6 +7,7 @@ declare module 'next-auth' {
     permissions: {
       dashboard: boolean;
       attendance: boolean;
+      leave: boolean;
       registration_request: boolean;
       setting: boolean;
     };
@@ -22,6 +23,7 @@ declare module 'next-auth' {
       permissions: {
         dashboard: boolean;
         attendance: boolean;
+        leave: boolean;
         registration_request: boolean;
         setting: boolean;
       };
@@ -36,6 +38,7 @@ declare module 'next-auth/jwt' {
     permissions: {
       dashboard: boolean;
       attendance: boolean;
+      leave: boolean;
       registration_request: boolean;
       setting: boolean;
     };

@@ -23,6 +23,7 @@ interface SidebarProps {
   permissions: {
     dashboard: boolean;
     attendance: boolean;
+    leave: boolean;
     registration_request: boolean;
     setting: boolean;
   };
@@ -70,7 +71,7 @@ export default function Sidebar({ permissions }: SidebarProps) {
       name: 'Leave',
       icon: FileText,
       href: '/dashboard/leave',
-      enabled: true,
+      enabled: permissions.leave, // ← now uses permission
     },
     {
       name: 'Registration',
@@ -111,7 +112,6 @@ export default function Sidebar({ permissions }: SidebarProps) {
           if (!item.enabled) return null;
 
           const Icon = item.icon;
-          // FIXED: Exact match only, no startsWith
           const isActive = pathname === item.href;
 
           return (

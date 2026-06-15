@@ -3,6 +3,21 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { readSheet, writeSheet } from '@/lib/sheets';
 
+/**
+ * Sheet column layout (0-indexed):
+ * A[0]  = id
+ * B[1]  = name
+ * C[2]  = username
+ * D[3]  = password (hashed)
+ * E[4]  = role
+ * F[5]  = dashboard (TRUE/FALSE)
+ * G[6]  = attendance (TRUE/FALSE)
+ * H[7]  = leave (TRUE/FALSE)        ← NEW
+ * I[8]  = registration_request (TRUE/FALSE)
+ * J[9]  = setting (TRUE/FALSE)
+ * K[10] = last_active (ISO string)  ← NEW
+ */
+
 interface UserPermission {
   id: string;
   name: string;
@@ -10,8 +25,10 @@ interface UserPermission {
   role: string;
   dashboard: boolean;
   attendance: boolean;
+  leave: boolean;
   registration_request: boolean;
   setting: boolean;
+  last_active?: string;
 }
 
 export async function GET() {
@@ -35,8 +52,10 @@ export async function GET() {
       role: row[4] || '',
       dashboard: row[5] === 'TRUE' || row[5] === true,
       attendance: row[6] === 'TRUE' || row[6] === true,
-      registration_request: row[7] === 'TRUE' || row[7] === true,
-      setting: row[8] === 'TRUE' || row[8] === true,
+      leave: row[7] === 'TRUE' || row[7] === true,
+      registration_request: row[8] === 'TRUE' || row[8] === true,
+      setting: row[9] === 'TRUE' || row[9] === true,
+      last_active: row[10] || '',
     }));
 
     return NextResponse.json(usersData);
@@ -61,7 +80,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'No users found' }, { status: 404 });
     }
 
-    // Update each user row
     for (let i = 1; i < rows.length; i++) {
       const userId = rows[i][0];
       const user = users.find((u: UserPermission) => u.id === userId);
@@ -69,13 +87,15 @@ export async function PUT(request: NextRequest) {
       if (user) {
         rows[i][5] = user.dashboard ? 'TRUE' : 'FALSE';
         rows[i][6] = user.attendance ? 'TRUE' : 'FALSE';
-        rows[i][7] = user.registration_request ? 'TRUE' : 'FALSE';
-        rows[i][8] = user.setting ? 'TRUE' : 'FALSE';
+        rows[i][7] = user.leave ? 'TRUE' : 'FALSE';
+        rows[i][8] = user.registration_request ? 'TRUE' : 'FALSE';
+        rows[i][9] = user.setting ? 'TRUE' : 'FALSE';
+        // col 10 (last_active) is NOT touched here — it's updated on login/activity
       }
     }
 
-    // Write back to sheet
-    await writeSheet('users', `A2:I${rows.length}`, rows.slice(1));
+    // Write columns A–J (not K/last_active)
+    await writeSheet('users', `A2:J${rows.length}`, rows.slice(1).map(r => r.slice(0, 10)));
 
     return NextResponse.json({ success: true });
   } catch (error) {

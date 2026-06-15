@@ -5,12 +5,11 @@ import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import Card from "@/components/ui/Card";
-import Table from "@/components/ui/Table";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Loading from "@/components/ui/Loading";
 import { LeaveAttendance, StaffList } from "@/types";
-import { Plus, Calendar, Edit, Trash2, Upload, FileText, Search, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Plus, Calendar, Edit, Trash2, Upload, FileText, Search, ChevronUp, ChevronDown, ChevronsUpDown, ShieldOff } from "lucide-react";
 
 type SortField = 'name' | 'date_from' | 'date_end' | 'category' | 'created_at';
 type SortDir = 'asc' | 'desc';
@@ -25,7 +24,6 @@ export default function LeavePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  // Filter & sort state
   const [searchName, setSearchName] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -63,7 +61,6 @@ export default function LeavePage() {
     }
   };
 
-  // Filtered + sorted data
   const filteredLeaves = useMemo(() => {
     let result = [...leaves];
 
@@ -71,18 +68,9 @@ export default function LeavePage() {
       const q = searchName.toLowerCase();
       result = result.filter((l) => l.name.toLowerCase().includes(q));
     }
-
-    if (filterCategory) {
-      result = result.filter((l) => l.category === filterCategory);
-    }
-
-    if (filterDateFrom) {
-      result = result.filter((l) => l.date_from >= filterDateFrom);
-    }
-
-    if (filterDateTo) {
-      result = result.filter((l) => l.date_end <= filterDateTo);
-    }
+    if (filterCategory) result = result.filter((l) => l.category === filterCategory);
+    if (filterDateFrom) result = result.filter((l) => l.date_from >= filterDateFrom);
+    if (filterDateTo) result = result.filter((l) => l.date_end <= filterDateTo);
 
     result.sort((a, b) => {
       let aVal = a[sortField] || '';
@@ -95,12 +83,8 @@ export default function LeavePage() {
   }, [leaves, searchName, filterCategory, filterDateFrom, filterDateTo, sortField, sortDir]);
 
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
+    if (sortField === field) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -108,11 +92,9 @@ export default function LeavePage() {
     return sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
   };
 
-  // Unique names for quick filter buttons
-  const uniqueNames = useMemo(() => {
-    const names = Array.from(new Set(leaves.map((l) => l.name))).sort();
-    return names;
-  }, [leaves]);
+  const uniqueNames = useMemo(() =>
+    Array.from(new Set(leaves.map((l) => l.name))).sort(),
+  [leaves]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,13 +170,7 @@ export default function LeavePage() {
 
   const handleEdit = (leave: LeaveAttendance) => {
     setEditingLeave(leave);
-    setFormData({
-      staff_id: "",
-      date_from: leave.date_from,
-      date_end: leave.date_end,
-      category: leave.category,
-      link_url: leave.link_url,
-    });
+    setFormData({ staff_id: "", date_from: leave.date_from, date_end: leave.date_end, category: leave.category, link_url: leave.link_url });
     setIsModalOpen(true);
   };
 
@@ -225,6 +201,30 @@ export default function LeavePage() {
   if (status !== "loading" && !session) redirect("/login");
   if (status === "loading") return <div className="flex items-center justify-center min-h-screen"><Loading size="lg" /></div>;
   if (!session) return null;
+
+  // ── Permission guard ──────────────────────────────────────────────────────
+  if (!session.user.permissions.leave) {
+    return (
+      <DashboardLayout
+        user={{
+          id: session.user.id,
+          username: session.user.email || "",
+          name: session.user.name ?? "",
+          role: session.user.role,
+          permissions: session.user.permissions,
+        }}
+      >
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <ShieldOff size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Access Restricted</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            You don't have permission to view Leave Management.<br />
+            Please contact an administrator.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const ThBtn = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <th
@@ -262,11 +262,9 @@ export default function LeavePage() {
           </Button>
         </div>
 
-        {/* Filter Card */}
         <Card>
           <div className="space-y-3">
             <div className="flex flex-col md:flex-row gap-3">
-              {/* Search by name */}
               <div className="flex-1 relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                 <input
@@ -277,14 +275,8 @@ export default function LeavePage() {
                   className="input-field pl-9"
                 />
               </div>
-
-              {/* Category filter */}
               <div className="w-full md:w-44">
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="input-field"
-                >
+                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="input-field">
                   <option value="">All Categories</option>
                   <option value="sick">Sick Leave</option>
                   <option value="annual">Annual Leave</option>
@@ -292,35 +284,15 @@ export default function LeavePage() {
                   <option value="emergency">Emergency Leave</option>
                 </select>
               </div>
-
-              {/* Date range filter */}
               <div className="w-full md:w-36">
-                <input
-                  type="date"
-                  value={filterDateFrom}
-                  onChange={(e) => setFilterDateFrom(e.target.value)}
-                  className="input-field"
-                  placeholder="From date"
-                />
+                <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="input-field" />
               </div>
               <div className="w-full md:w-36">
-                <input
-                  type="date"
-                  value={filterDateTo}
-                  onChange={(e) => setFilterDateTo(e.target.value)}
-                  className="input-field"
-                  placeholder="To date"
-                />
+                <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="input-field" />
               </div>
-
-              {hasActiveFilter && (
-                <Button variant="secondary" onClick={clearFilters}>
-                  Clear
-                </Button>
-              )}
+              {hasActiveFilter && <Button variant="secondary" onClick={clearFilters}>Clear</Button>}
             </div>
 
-            {/* Quick name filter chips */}
             {uniqueNames.length > 0 && uniqueNames.length <= 20 && (
               <div className="flex flex-wrap gap-1.5">
                 <span className="text-xs text-gray-500 dark:text-gray-400 self-center mr-1">Quick:</span>
@@ -371,9 +343,7 @@ export default function LeavePage() {
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredLeaves.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-6 text-center text-sm text-gray-500">
-                        No leave records found
-                      </td>
+                      <td colSpan={7} className="px-3 py-6 text-center text-sm text-gray-500">No leave records found</td>
                     </tr>
                   ) : (
                     filteredLeaves.map((row) => (

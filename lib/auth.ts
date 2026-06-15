@@ -1,7 +1,24 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import { readSheet } from '@/lib/sheets';
+import { readSheet, writeSheet } from '@/lib/sheets';
+
+// ── Utility: update last_active column (col index 9 = J) ──
+export async function updateLastActive(userId: string) {
+  try {
+    const rows = await readSheet('users');
+    const rowIndex = rows.findIndex((row, i) => i > 0 && row[0] === userId);
+    if (rowIndex === -1) return;
+
+    const now = new Date().toISOString();
+    rows[rowIndex][9] = now; // column J = last_active
+
+    await writeSheet('users', `J${rowIndex + 1}`, [[now]]);
+  } catch (error) {
+    // Non-blocking: log but don't throw
+    console.error('Failed to update last_active:', error);
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -18,7 +35,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const rows = await readSheet('users');
-          
+
           if (!rows || rows.length < 2) {
             throw new Error('No users found');
           }
@@ -36,6 +53,13 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Invalid username or password');
           }
 
+          // Update last_active on login
+          const rowIndex = rows.findIndex((row, i) => i > 0 && row[0] === user[0]);
+          if (rowIndex !== -1) {
+            const now = new Date().toISOString();
+            await writeSheet('users', `J${rowIndex + 1}`, [[now]]);
+          }
+
           return {
             id: user[0],
             name: user[1],
@@ -44,8 +68,9 @@ export const authOptions: NextAuthOptions = {
             permissions: {
               dashboard: user[5] === 'TRUE' || user[5] === true,
               attendance: user[6] === 'TRUE' || user[6] === true,
-              registration_request: user[7] === 'TRUE' || user[7] === true,
-              setting: user[8] === 'TRUE' || user[8] === true,
+              leave: user[7] === 'TRUE' || user[7] === true,          // NEW col G (index 7)
+              registration_request: user[8] === 'TRUE' || user[8] === true, // was 7, now 8
+              setting: user[9] === 'TRUE' || user[9] === true,         // was 8, now 9 — BUT see note below
             },
           };
         } catch (error) {
@@ -79,7 +104,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 60, // ← 30 MINUTES (was 30 days)
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development',
