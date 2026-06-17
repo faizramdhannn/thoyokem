@@ -101,6 +101,7 @@ export default function ImportTab() {
             tipe_absensi: String(row['Tipe Absensi'] || ''),
             jabatan: String(row['Jabatan'] || ''),
             kantor: String(row['Kantor'] || ''),
+            keterangan: String(row['Keterangan'] || ''),
           }));
 
           resolve(mappedData);
