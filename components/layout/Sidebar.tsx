@@ -96,7 +96,7 @@ export default function Sidebar({ permissions }: SidebarProps) {
       <div className="p-3 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
-            <h1 className="text-base font-bold text-primary">Attendance</h1>
+            <h1 className="text-base font-bold text-primary">Thoyokem</h1>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
