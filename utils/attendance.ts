@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 
 /**
  * Hitung jumlah hari cuti dari date_from sampai date_end (inklusif).
- * Contoh: 26 Mar - 27 Mar = 2 hari
  */
 export function countLeaveDays(leave: LeaveAttendance): number {
   if (!leave.date_from || !leave.date_end) return 1;
@@ -11,7 +10,7 @@ export function countLeaveDays(leave: LeaveAttendance): number {
   const end = new Date(leave.date_end);
   if (isNaN(from.getTime()) || isNaN(end.getTime())) return 1;
   const diffMs = end.getTime() - from.getTime();
-  return Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1; // inklusif
+  return Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
 }
 
 /**
@@ -31,6 +30,7 @@ interface ProcessedDay {
   masukTarget?: string;
   pulang?: string;
   pulangTarget?: string;
+  keterangan?: string;
 }
 
 export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRecord[] {
@@ -48,6 +48,11 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
     }
 
     const dayRecord = dateMap.get(record.tanggal_absensi)!;
+
+    // Simpan keterangan jika ada
+    if (record.keterangan) {
+      dayRecord.keterangan = record.keterangan;
+    }
 
     if (record.tipe_absensi === 'Absensi Masuk') {
       dayRecord.masuk = record.jam_absensi;
@@ -126,6 +131,7 @@ export function processAttendanceData(rawData: AttendanceImport[]): AttendanceRe
       jam_pulang_actual: jamPulangActual,
       overtime_menit: overtimeMenit,
       keterangan_pulang: keteranganPulang,
+      keterangan: dayRecord.keterangan || '',
     });
   });
 
@@ -191,10 +197,6 @@ export function calculateRecap(records: AttendanceRecord[]): AttendanceRecap[] {
 
 /**
  * Convert time string to minutes.
- * Supports:
- * - Standard:     "08:00" or "8:00"  → 480
- * - Dot separator: "8.00"            → 480
- * - Excel decimal: "0.3333"          → 480 (08:00)
  */
 function timeToMinutes(time: string): number {
   if (!time || time.trim() === '') return 0;
@@ -242,6 +244,7 @@ export function exportToXLSX(records: AttendanceRecord[]): void {
     'Jam Pulang (Actual)': r.jam_pulang_actual,
     'Overtime (menit)': r.overtime_menit,
     'Keterangan Pulang': r.keterangan_pulang,
+    'Keterangan': r.keterangan,
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -251,7 +254,24 @@ export function exportToXLSX(records: AttendanceRecord[]): void {
   XLSX.writeFile(workbook, `attendance_report_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
-export function exportRecapToXLSX(recap: AttendanceRecap[]): void {
+/**
+ * Export recap dengan filter tanggal opsional.
+ * rawRecords = semua AttendanceRecord (sebelum di-recap), digunakan untuk filter by date.
+ * dateFrom & dateTo format: 'YYYY-MM-DD'
+ */
+export function exportRecapToXLSX(
+  allRecords: AttendanceRecord[],
+  dateFrom?: string,
+  dateTo?: string
+): void {
+  // Filter records by date range if provided
+  let filtered = allRecords;
+  if (dateFrom) filtered = filtered.filter((r) => r.tanggal_absensi >= dateFrom);
+  if (dateTo) filtered = filtered.filter((r) => r.tanggal_absensi <= dateTo);
+
+  // Re-calculate recap from filtered records
+  const recap = calculateRecap(filtered);
+
   const exportData = recap.map((r) => ({
     'Nama Karyawan': r.nama_karyawan,
     'Jumlah Hadir': r.jumlah_hadir,
@@ -267,5 +287,13 @@ export function exportRecapToXLSX(recap: AttendanceRecap[]): void {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Recap');
 
-  XLSX.writeFile(workbook, `attendance_recap_${new Date().toISOString().split('T')[0]}.xlsx`);
+  const suffix = dateFrom && dateTo
+    ? `${dateFrom}_to_${dateTo}`
+    : dateFrom
+    ? `from_${dateFrom}`
+    : dateTo
+    ? `to_${dateTo}`
+    : new Date().toISOString().split('T')[0];
+
+  XLSX.writeFile(workbook, `attendance_recap_${suffix}.xlsx`);
 }

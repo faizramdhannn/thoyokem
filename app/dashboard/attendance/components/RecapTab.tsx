@@ -5,7 +5,8 @@ import Card from '@/components/ui/Card';
 import Loading from '@/components/ui/Loading';
 import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
-import { AttendanceImport, AttendanceRecap } from '@/types';
+import Modal from '@/components/ui/Modal';
+import { AttendanceImport, AttendanceRecord, AttendanceRecap } from '@/types';
 import { processAttendanceData, calculateRecap, exportRecapToXLSX } from '@/utils/attendance';
 import { Download, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 
@@ -13,15 +14,22 @@ const PAGE_SIZE = 20;
 
 export default function RecapTab() {
   const [rawData, setRawData] = useState<AttendanceImport[]>([]);
+  const [processedRecords, setProcessedRecords] = useState<AttendanceRecord[]>([]);
   const [recapData, setRecapData] = useState<AttendanceRecap[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
+
+  // Export modal state
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportDateFrom, setExportDateFrom] = useState('');
+  const [exportDateTo, setExportDateTo] = useState('');
 
   useEffect(() => { fetchData(); }, []);
 
   useEffect(() => {
     if (rawData.length > 0) {
       const processed = processAttendanceData(rawData);
+      setProcessedRecords(processed);
       setRecapData(calculateRecap(processed));
     }
   }, [rawData]);
@@ -36,6 +44,31 @@ export default function RecapTab() {
       setIsLoading(false);
     }
   };
+
+  // Get available date range from data
+  const availableDates = processedRecords.map((r) => r.tanggal_absensi).sort();
+  const minDate = availableDates[0] || '';
+  const maxDate = availableDates[availableDates.length - 1] || '';
+
+  const handleOpenExportModal = () => {
+    // Default to full range
+    setExportDateFrom(minDate);
+    setExportDateTo(maxDate);
+    setIsExportModalOpen(true);
+  };
+
+  const handleExport = () => {
+    exportRecapToXLSX(processedRecords, exportDateFrom || undefined, exportDateTo || undefined);
+    setIsExportModalOpen(false);
+  };
+
+  // Preview count — how many employees have records in selected range
+  const previewCount = (() => {
+    let filtered = processedRecords;
+    if (exportDateFrom) filtered = filtered.filter((r) => r.tanggal_absensi >= exportDateFrom);
+    if (exportDateTo) filtered = filtered.filter((r) => r.tanggal_absensi <= exportDateTo);
+    return new Set(filtered.map((r) => r.nama)).size;
+  })();
 
   const totalLate = recapData.reduce((sum, r) => sum + r.jumlah_keterlambatan, 0);
   const totalOvertime = recapData.reduce((sum, r) => sum + r.jumlah_overtime, 0);
@@ -115,7 +148,7 @@ export default function RecapTab() {
       <Card>
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Employee Summary</h3>
-          <Button onClick={() => exportRecapToXLSX(recapData)} variant="secondary">
+          <Button onClick={handleOpenExportModal} variant="secondary" disabled={recapData.length === 0}>
             <Download size={14} className="mr-1.5" />
             Export
           </Button>
@@ -168,6 +201,78 @@ export default function RecapTab() {
           <Pagination page={page} totalPages={totalPages} totalItems={recapData.length} pageSize={PAGE_SIZE} onChange={setPage} />
         )}
       </Card>
+
+      {/* Export Date Range Modal */}
+      <Modal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Export Recap"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Pilih rentang tanggal untuk data yang akan diekspor. Kosongkan untuk ekspor semua data.
+          </p>
+
+          {minDate && maxDate && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-md px-3 py-2">
+              Data tersedia: <span className="font-medium text-gray-700 dark:text-gray-300">{minDate}</span>
+              {' '}s/d{' '}
+              <span className="font-medium text-gray-700 dark:text-gray-300">{maxDate}</span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="label-field">Dari Tanggal</label>
+              <input
+                type="date"
+                value={exportDateFrom}
+                min={minDate}
+                max={exportDateTo || maxDate}
+                onChange={(e) => setExportDateFrom(e.target.value)}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="label-field">Sampai Tanggal</label>
+              <input
+                type="date"
+                value={exportDateTo}
+                min={exportDateFrom || minDate}
+                max={maxDate}
+                onChange={(e) => setExportDateTo(e.target.value)}
+                className="input-field"
+              />
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className={`text-xs rounded-md px-3 py-2 ${
+            previewCount > 0
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+              : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+          }`}>
+            {previewCount > 0
+              ? `✓ ${previewCount} karyawan akan diekspor`
+              : '⚠ Tidak ada data pada rentang ini'}
+          </div>
+
+          <div className="flex gap-2 justify-end pt-1">
+            <Button variant="secondary" onClick={() => setIsExportModalOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleExport}
+              disabled={previewCount === 0}
+            >
+              <Download size={14} className="mr-1.5" />
+              Export Excel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

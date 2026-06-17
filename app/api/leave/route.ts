@@ -12,13 +12,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check leave permission
-    if (!session.user.permissions.leave) {
+    // Allow dashboard OR leave permission to read leave data
+    if (!session.user.permissions.leave && !session.user.permissions.dashboard) {
       return NextResponse.json({ error: 'Forbidden: no leave access' }, { status: 403 });
     }
 
-    // Update last_active (non-blocking)
-    updateLastActive(session.user.id);
+    // Update last_active (non-blocking) — only for leave permission users
+    if (session.user.permissions.leave) {
+      updateLastActive(session.user.id);
+    }
 
     const rows = await readSheet('leave_attendance');
 

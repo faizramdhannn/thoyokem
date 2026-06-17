@@ -7,10 +7,10 @@ export interface User {
   role: string;
   dashboard: boolean;
   attendance: boolean;
-  leave: boolean;           // NEW
+  leave: boolean;
   registration_request: boolean;
   setting: boolean;
-  last_active?: string;     // NEW
+  last_active?: string;
 }
 
 // Registration Types
@@ -36,6 +36,7 @@ export interface AttendanceImport {
   tipe_absensi: string;
   jabatan: string;
   kantor: string;
+  keterangan: string; // NEW — kolom L di sheet
 }
 
 export interface AttendanceRecord {
@@ -51,6 +52,7 @@ export interface AttendanceRecord {
   jam_pulang_actual: string;
   overtime_menit: number;
   keterangan_pulang: string;
+  keterangan: string; // NEW — dari kolom keterangan import
 }
 
 export interface AttendanceRecap {
@@ -95,7 +97,7 @@ export interface SessionUser {
   permissions: {
     dashboard: boolean;
     attendance: boolean;
-    leave: boolean;           // NEW
+    leave: boolean;
     registration_request: boolean;
     setting: boolean;
   };

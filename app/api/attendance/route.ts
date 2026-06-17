@@ -8,8 +8,13 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user.permissions.attendance) {
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Allow dashboard OR attendance permission to read attendance data
+    if (!session.user.permissions.attendance && !session.user.permissions.dashboard) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const rows = await readSheet('attendance_import');
@@ -29,6 +34,7 @@ export async function GET() {
       tipe_absensi: row[7] || '',
       jabatan: row[8] || '',
       kantor: row[9] || '',
+      keterangan: row[10] || '',
     }));
 
     return NextResponse.json(attendance);
@@ -71,6 +77,7 @@ export async function POST(request: NextRequest) {
           tipe_absensi: row[7] || '',
           jabatan: row[8] || '',
           kantor: row[9] || '',
+          keterangan: row[10] || '',
         }))
       : [];
 
@@ -99,6 +106,7 @@ export async function POST(request: NextRequest) {
       item.tipe_absensi,
       item.jabatan,
       item.kantor,
+      item.keterangan || '',
     ]);
 
     await clearAndWriteSheet('attendance_import', values);
