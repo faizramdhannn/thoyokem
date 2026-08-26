@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { generateApiKey } from '@/lib/apiAuth';
 import { validate, apiKeyCreateSchema } from '@/lib/validation';
+import { logActivity } from '@/lib/activityLog';
 
 // API keys always managed via the normal session cookie — never via another API key
 // (no bootstrapping a key from a key), so every handler here uses getServerSession directly.
@@ -61,6 +62,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Never log the plaintext token or its hash — only the name/prefix, enough to
+    // identify which key without reconstructing it from the audit trail.
+    await logActivity({
+      doctype: 'User',
+      documentId: session.user.id,
+      action: 'Created',
+      changedBy: session.user.name || '',
+      before: null,
+      after: { api_key_name: name, api_key_prefix: prefix },
+    });
+
     // The plaintext token is only ever returned here, at creation — it's not
     // recoverable afterwards since only its hash is stored.
     return NextResponse.json({ success: true, id: newId, token });
@@ -84,6 +96,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'API key tidak ditemukan' }, { status: 404 });
     }
     await prisma.apiKey.update({ where: { id }, data: { revokedAt: new Date().toISOString() } });
+
+    await logActivity({
+      doctype: 'User',
+      documentId: session.user.id,
+      action: 'Deleted',
+      changedBy: session.user.name || '',
+      before: null,
+      after: { api_key_name: key.name, api_key_prefix: key.keyPrefix, revoked: true },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error revoking API key:', error);

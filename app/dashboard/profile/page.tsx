@@ -412,7 +412,26 @@ export default function ProfilePage() {
                       <Copy size={14} />
                     </button>
                   </div>
-                  <button onClick={() => setGeneratedToken(null)} className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline mt-1.5">
+
+                  <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
+                    <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 mb-1.5">Cara pakai</p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mb-1.5">
+                      Kirim token ini sebagai header <code className="bg-white dark:bg-gray-800 px-1 rounded">Authorization</code> di setiap request:
+                    </p>
+                    <code className="block text-[11px] bg-white dark:bg-gray-800 px-2 py-1.5 rounded border border-amber-200 dark:border-amber-700 overflow-x-auto whitespace-nowrap mb-2">
+                      Authorization: Bearer {generatedToken}
+                    </code>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mb-1.5">Contoh dengan curl:</p>
+                    <code className="block text-[11px] bg-white dark:bg-gray-800 px-2 py-1.5 rounded border border-amber-200 dark:border-amber-700 overflow-x-auto whitespace-pre mb-2">
+                      {`curl -H "Authorization: Bearer ${generatedToken}" \\\n  ${typeof window !== 'undefined' ? window.location.origin : ''}/api/items`}
+                    </code>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                      Endpoint yang bisa diakses saat ini: <code className="bg-white dark:bg-gray-800 px-1 rounded">GET /api/items</code> dan{' '}
+                      <code className="bg-white dark:bg-gray-800 px-1 rounded">GET /api/customers</code> (baca data saja, ikut izin role Anda).
+                    </p>
+                  </div>
+
+                  <button onClick={() => setGeneratedToken(null)} className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline mt-2">
                     Sudah disimpan, tutup
                   </button>
                 </div>

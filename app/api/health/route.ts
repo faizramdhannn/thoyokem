@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
-/** Lightweight DB connectivity check for the sidebar's status dot — any authenticated user. */
+// Trivial DB ping — deliberately no auth, no sensitive data (just {ok: true/false}).
+// Two callers depend on that: the sidebar's status dot, and the "Keep Supabase Alive"
+// GitHub Action, which pings this unauthenticated on a daily cron — adding a session
+// requirement here breaks that workflow (it has no cookie to send), so don't.
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   try {
     await prisma.$queryRaw`SELECT 1`;
     return NextResponse.json({ ok: true });
