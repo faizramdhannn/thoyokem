@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/ui/Button';
 import { DetailView, DetailSection, FieldGrid, DetailTable } from '@/components/ui/DetailView';
 import { StatusBadge } from '@/components/ui/ListView';
@@ -16,6 +15,7 @@ import { AlertCircle, XCircle, History, Printer, ChevronDown, ClipboardCheck, Pa
 import { formatDate } from '@/lib/date';
 import { useDoctypePermission } from '@/lib/useDoctypePermission';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const STATUS_TONE: Record<string, 'gray' | 'orange' | 'blue' | 'green' | 'red'> = {
   Unallocated: 'gray',
@@ -70,9 +70,9 @@ export default function DeliveryNoteDetailPage() {
   };
 
   const runAction = async (action: 'confirm_pick' | 'complete_pack' | 'good_issue' | 'cancel' | 'amend') => {
-    if (action === 'cancel' && !confirm(dn?.status === 'Good Issued' ? 'Batalkan delivery ini? Stok yang sudah keluar akan dikembalikan.' : 'Batalkan delivery ini?')) return;
-    if (action === 'amend' && !confirm('Kirim ulang delivery ini (buat DN baru)?')) return;
-    if (action === 'good_issue' && !confirm('Konfirmasi Good Issue? Stok akan langsung terpotong dan tidak bisa dibatalkan tanpa proses Cancel.')) return;
+    if (action === 'cancel' && !(await confirmDialog({ message: dn?.status === 'Good Issued' ? 'Batalkan delivery ini? Stok yang sudah keluar akan dikembalikan.' : 'Batalkan delivery ini?' }))) return;
+    if (action === 'amend' && !(await confirmDialog({ message: 'Kirim ulang delivery ini (buat DN baru)?', danger: false, confirmText: 'Ya, Kirim Ulang' }))) return;
+    if (action === 'good_issue' && !(await confirmDialog({ message: 'Konfirmasi Good Issue? Stok akan langsung terpotong dan tidak bisa dibatalkan tanpa proses Cancel.', danger: false, confirmText: 'Ya, Good Issue' }))) return;
     setBusy(true);
     try {
       const res = await fetch('/api/delivery-notes', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dn_id: id, action }) });
@@ -108,7 +108,7 @@ export default function DeliveryNoteDetailPage() {
 
   if (!hasAccess) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -116,12 +116,12 @@ export default function DeliveryNoteDetailPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <DetailView
         backHref="/dashboard/delivery-order"
         backLabel="Delivery Order"
@@ -259,6 +259,6 @@ export default function DeliveryNoteDetailPage() {
           </div>
         )}
       </DetailView>
-    </DashboardLayout>
+    
   );
 }

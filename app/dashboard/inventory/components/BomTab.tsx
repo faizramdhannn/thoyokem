@@ -12,6 +12,7 @@ import { ListViewLayout, ListRow, StatusBadge } from '@/components/ui/ListView';
 import { useViewMode, useVisibleColumns, ReportViewControls, ReportTable, exportToExcel, ReportColumn } from '@/components/ui/ReportView';
 import { Bom, Item } from '@/types';
 import { Plus, Trash2, Layers } from 'lucide-react';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const bomFormSchema = z.object({
   item_code: z.string().min(1, 'Produk wajib dipilih'),
@@ -126,7 +127,7 @@ export default function BomTab() {
   };
 
   const handleDelete = async (bomId: string) => {
-    if (!confirm('Hapus BOM ini?')) return;
+    if (!(await confirmDialog({ message: 'Hapus BOM ini?' }))) return;
     try {
       const res = await fetch(`/api/boms?bom_id=${bomId}`, { method: 'DELETE' });
       if (res.ok) fetchAll();

@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/ui/Button';
 import { DetailView, DetailSection, FieldGrid } from '@/components/ui/DetailView';
 import { StatusBadge } from '@/components/ui/ListView';
@@ -76,7 +75,7 @@ export default function LeaveDetailPage() {
 
   if (!session.user.permissions.leave) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -84,7 +83,7 @@ export default function LeaveDetailPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
@@ -95,7 +94,7 @@ export default function LeaveDetailPage() {
   const totalDays = leave ? countLeaveDays(leave) : 0;
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <DetailView
         backHref="/dashboard/hr/leave"
         backLabel="Leave"
@@ -157,6 +156,6 @@ export default function LeaveDetailPage() {
           </div>
         )}
       </DetailView>
-    </DashboardLayout>
+    
   );
 }

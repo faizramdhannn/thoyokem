@@ -17,6 +17,7 @@ import { Customer, Item, Warehouse } from '@/types';
 import { fetchUsdIdrRate, toIDR } from '@/lib/currency';
 import { Plus, Trash2, Send, XCircle, FileText, ShoppingBag, Check, Ban, RefreshCw, ScanLine } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const soFormSchema = z.object({
   customer_id: z.string().min(1, 'Customer wajib dipilih'),
@@ -249,7 +250,7 @@ export default function SalesOrdersTab() {
   };
 
   const runAction = async (so_id: string, action: 'submit' | 'cancel' | 'approve' | 'reject') => {
-    if (action === 'cancel' && !confirm('Batalkan SO ini?')) return;
+    if (action === 'cancel' && !(await confirmDialog({ message: 'Batalkan SO ini?' }))) return;
     setBusyId(so_id);
     try {
       const res = await fetch('/api/sales-orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ so_id, action }) });

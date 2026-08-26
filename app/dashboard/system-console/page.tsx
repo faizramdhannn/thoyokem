@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Loading from '@/components/ui/Loading';
 import Button from '@/components/ui/Button';
@@ -75,7 +74,7 @@ export default function SystemConsolePage() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -83,12 +82,12 @@ export default function SystemConsolePage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">Halaman ini hanya untuk Super Admin.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -173,6 +172,6 @@ export default function SystemConsolePage() {
           </div>
         ) : null}
       </div>
-    </DashboardLayout>
+    
   );
 }

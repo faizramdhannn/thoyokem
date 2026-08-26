@@ -3,7 +3,6 @@
 import { Suspense, useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import ImportTab from "./components/ImportTab";
 import DataTab from "./components/DataTab";
 import ReportTab from "./components/ReportTab";
@@ -34,15 +33,7 @@ function AttendancePageInner() {
 
   if (!session.user.permissions.attendance) {
     return (
-      <DashboardLayout
-        user={{
-          id: session.user.id,
-          username: session.user.email || "",
-          name: session.user.name ?? "",
-          role: session.user.role,
-          permissions: session.user.permissions,
-        }}
-      >
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -54,7 +45,7 @@ function AttendancePageInner() {
             </p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
@@ -66,15 +57,7 @@ function AttendancePageInner() {
   const { title } = titles[activeTab] || titles.data;
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    <>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
@@ -109,7 +92,7 @@ function AttendancePageInner() {
           }}
         />
       </Modal>
-    </DashboardLayout>
+    </>
   );
 }
 

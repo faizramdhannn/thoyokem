@@ -17,6 +17,7 @@ import { Warehouse } from '@/types';
 import { warehouseImportRowSchema, warehouseCreateSchema } from '@/lib/validation';
 import { Plus, Edit, Trash2, Warehouse as WarehouseIcon, Search, Upload, Ban, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const warehouseFormSchema = warehouseCreateSchema.extend({
   warehouse_name: z.string().min(1, 'Nama warehouse wajib diisi'),
@@ -240,7 +241,7 @@ export default function WarehousesTab() {
   };
 
   const handleDelete = async (warehouseId: string) => {
-    if (!confirm('Hapus warehouse ini?')) return;
+    if (!(await confirmDialog({ message: 'Hapus warehouse ini?' }))) return;
     const removed = queryClient.getQueryData<Warehouse[]>(['warehouses'])?.find((w) => w.warehouse_id === warehouseId);
     queryClient.setQueryData<Warehouse[]>(['warehouses'], (old) => (old ?? []).filter((w) => w.warehouse_id !== warehouseId));
     const restore = () => {
@@ -272,7 +273,7 @@ export default function WarehousesTab() {
   };
 
   const handleBulkDeactivate = async () => {
-    if (!confirm(`Nonaktifkan ${selectedIds.size} warehouse terpilih?`)) return;
+    if (!(await confirmDialog({ message: `Nonaktifkan ${selectedIds.size} warehouse terpilih?` }))) return;
     setIsBulkBusy(true);
     try {
       const results = await Promise.all(

@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import { DetailView, DetailSection, FieldGrid, DetailTable } from '@/components/ui/DetailView';
 import { StatusBadge } from '@/components/ui/ListView';
 import ActivityLogView from '@/components/ui/ActivityLogView';
@@ -72,7 +71,7 @@ export default function StaffDetailPage() {
 
   if (!session.user.permissions.staff) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -80,7 +79,7 @@ export default function StaffDetailPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
@@ -92,7 +91,7 @@ export default function StaffDetailPage() {
   const remaining = Math.max(0, quota - used);
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <DetailView
         backHref="/dashboard/hr/staff"
         backLabel="Staff"
@@ -148,6 +147,6 @@ export default function StaffDetailPage() {
           </div>
         )}
       </DetailView>
-    </DashboardLayout>
+    
   );
 }

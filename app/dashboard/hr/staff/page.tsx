@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useSession } from "next-auth/react";
 import { redirect, useRouter, useSearchParams, usePathname } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Loading from "@/components/ui/Loading";
@@ -34,6 +33,7 @@ import { logExport } from "@/lib/logExport";
 import { formatDate } from "@/lib/date";
 import { useSavedViews } from "@/lib/savedViews";
 import toast from "react-hot-toast";
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 // Mirrors staffCreateSchema's fields (lib/validation.ts) under the form's own field
 // names — mapped to the API's names in onSubmit — with name required client-side.
@@ -203,7 +203,7 @@ export default function StaffPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Hapus data karyawan ini? Tindakan ini tidak bisa dibatalkan.")) return;
+    if (!(await confirmDialog({ message: "Hapus data karyawan ini? Tindakan ini tidak bisa dibatalkan." }))) return;
     try {
       const response = await fetch(`/api/staff?id=${id}`, { method: "DELETE" });
       if (response.ok) fetchData();
@@ -222,7 +222,7 @@ export default function StaffPage() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Hapus ${selectedIds.size} data karyawan terpilih? Tindakan ini tidak bisa dibatalkan.`)) return;
+    if (!(await confirmDialog({ message: `Hapus ${selectedIds.size} data karyawan terpilih? Tindakan ini tidak bisa dibatalkan.` }))) return;
     setIsBulkBusy(true);
     try {
       const results = await Promise.all(
@@ -269,15 +269,7 @@ export default function StaffPage() {
 
   if (!session.user.permissions.staff) {
     return (
-      <DashboardLayout
-        user={{
-          id: session.user.id,
-          username: session.user.email || "",
-          name: session.user.name ?? "",
-          role: session.user.role,
-          permissions: session.user.permissions,
-        }}
-      >
+      
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <ShieldOff size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Access Restricted</h2>
@@ -286,20 +278,12 @@ export default function StaffPage() {
             Please contact an administrator.
           </p>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <>
       <ListViewLayout
         title="Staff Management"
@@ -504,6 +488,6 @@ export default function StaffPage() {
         </Modal>
 
       </>
-    </DashboardLayout>
+    
   );
 }

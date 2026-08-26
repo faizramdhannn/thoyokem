@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import ItemsTab from "./components/ItemsTab";
 import WarehousesTab from "./components/WarehousesTab";
 import StockEntriesTab from "./components/StockEntriesTab";
@@ -24,15 +23,7 @@ function InventoryPageInner() {
 
   if (!session.user.permissions.inventory) {
     return (
-      <DashboardLayout
-        user={{
-          id: session.user.id,
-          username: session.user.email || "",
-          name: session.user.name ?? "",
-          role: session.user.role,
-          permissions: session.user.permissions,
-        }}
-      >
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -42,7 +33,7 @@ function InventoryPageInner() {
             </p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
@@ -58,15 +49,7 @@ function InventoryPageInner() {
   const { title } = titles[activeTab] || titles.overview;
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <div className="space-y-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
@@ -82,7 +65,7 @@ function InventoryPageInner() {
           {activeTab === "warehouses" && <WarehousesTab />}
         </div>
       </div>
-    </DashboardLayout>
+    
   );
 }
 

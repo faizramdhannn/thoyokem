@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/ui/Button';
 import { DetailView, DetailSection, FieldGrid, DetailTable } from '@/components/ui/DetailView';
 import { StatusBadge } from '@/components/ui/ListView';
@@ -16,6 +15,7 @@ import { AlertCircle, Send, PackageCheck, XCircle, FileText, Check, Ban, History
 import { formatDate } from '@/lib/date';
 import { useDoctypePermission } from '@/lib/useDoctypePermission';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 interface PurchaseOrderWithItems {
   po_id: string;
@@ -78,8 +78,8 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const runAction = async (action: 'submit' | 'receive' | 'cancel' | 'approve' | 'reject' | 'amend') => {
-    if (action === 'cancel' && !confirm('Batalkan PO ini? Kalau sudah Received, stok yang sudah masuk akan dibalik.')) return;
-    if (action === 'amend' && !confirm('Buat draft baru dari PO ini?')) return;
+    if (action === 'cancel' && !(await confirmDialog({ message: 'Batalkan PO ini? Kalau sudah Received, stok yang sudah masuk akan dibalik.' }))) return;
+    if (action === 'amend' && !(await confirmDialog({ message: 'Buat draft baru dari PO ini?', danger: false, confirmText: 'Ya, Amend' }))) return;
     setBusy(true);
     try {
       const res = await fetch('/api/purchase-orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ po_id: id, action }) });
@@ -102,7 +102,7 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const duplicateOrder = async () => {
-    if (!po || !confirm(`Buat Purchase Order baru sebagai salinan dari ${po.po_id}?`)) return;
+    if (!po || !(await confirmDialog({ message: `Buat Purchase Order baru sebagai salinan dari ${po.po_id}?`, danger: false, confirmText: 'Ya, Duplikat' }))) return;
     setBusy(true);
     try {
       const res = await fetch('/api/purchase-orders', {
@@ -158,7 +158,7 @@ export default function PurchaseOrderDetailPage() {
 
   if (!session.user.permissions.purchasing) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -166,12 +166,12 @@ export default function PurchaseOrderDetailPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <DetailView
         backHref="/dashboard/purchasing"
         backLabel="Purchase Orders"
@@ -294,6 +294,6 @@ export default function PurchaseOrderDetailPage() {
           </div>
         )}
       </DetailView>
-    </DashboardLayout>
+    
   );
 }

@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Loading from "@/components/ui/Loading";
 import { UserProfile } from "@/types";
 import { Save, Upload, KeyRound, User as UserIcon, Code2, Copy, Trash2, Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 interface ApiKeyRow {
   id: string;
@@ -83,7 +83,7 @@ export default function ProfilePage() {
   };
 
   const handleRevokeKey = async (id: string) => {
-    if (!confirm("Cabut API key ini? Aplikasi yang memakainya akan langsung berhenti bisa akses.")) return;
+    if (!(await confirmDialog({ message: "Cabut API key ini? Aplikasi yang memakainya akan langsung berhenti bisa akses." }))) return;
     setBusyKeyId(id);
     try {
       const res = await fetch(`/api/api-keys?id=${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -205,15 +205,7 @@ export default function ProfilePage() {
     .toUpperCase();
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <div className="space-y-4 max-w-2xl">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
@@ -481,6 +473,6 @@ export default function ProfilePage() {
           </>
         )}
       </div>
-    </DashboardLayout>
+    
   );
 }

@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { DetailView, DetailSection, FieldGrid, DetailTable } from '@/components/ui/DetailView';
@@ -18,6 +17,7 @@ import { AlertCircle, Wallet, Printer, XCircle } from 'lucide-react';
 import { formatDate } from '@/lib/date';
 import { useDoctypePermission } from '@/lib/useDoctypePermission';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 interface PaymentEntry {
   payment_id: string;
@@ -73,7 +73,7 @@ export default function SalesInvoiceDetailPage() {
   };
 
   const runCancel = async () => {
-    if (!confirm('Batalkan Sales Invoice ini?')) return;
+    if (!(await confirmDialog({ message: 'Batalkan Sales Invoice ini?' }))) return;
     try {
       const res = await fetch('/api/sales-invoices', {
         method: 'PATCH',
@@ -148,7 +148,7 @@ export default function SalesInvoiceDetailPage() {
 
   if (!session.user.permissions.sales_order) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -156,12 +156,12 @@ export default function SalesInvoiceDetailPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    <>
       <DetailView
         backHref="/dashboard/sales-order"
         backLabel="Sales Invoices"
@@ -253,6 +253,6 @@ export default function SalesInvoiceDetailPage() {
           </div>
         </form>
       </Modal>
-    </DashboardLayout>
+    </>
   );
 }

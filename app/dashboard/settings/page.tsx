@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useSession } from "next-auth/react";
 import { redirect, useRouter, useSearchParams, usePathname } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -15,6 +14,7 @@ import { Role } from "@/types";
 import { Save, Clock, Timer, Plus, Edit, Trash2, ShieldCheck, DollarSign, RefreshCw } from "lucide-react";
 import { formatDateTime } from "@/lib/date";
 import toast from "react-hot-toast";
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 interface UserWithRole {
   id: string;
@@ -330,7 +330,7 @@ export default function SettingsPage() {
   };
 
   const handleDeleteRole = async (roleId: string) => {
-    if (!confirm("Hapus role ini?")) return;
+    if (!(await confirmDialog({ message: "Hapus role ini?" }))) return;
     try {
       const res = await fetch(`/api/roles?role_id=${roleId}`, { method: "DELETE" });
       if (res.ok) {
@@ -349,15 +349,7 @@ export default function SettingsPage() {
   if (!session) return null;
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <div className="space-y-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
@@ -666,6 +658,6 @@ export default function SettingsPage() {
           </form>
         </Modal>
       </div>
-    </DashboardLayout>
+    
   );
 }

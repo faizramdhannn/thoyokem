@@ -16,6 +16,7 @@ import { Supplier } from '@/types';
 import { supplierImportRowSchema, supplierCreateSchema } from '@/lib/validation';
 import { Plus, Edit, Trash2, Truck, Upload, Ban, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const supplierFormSchema = supplierCreateSchema.extend({
   supplier_name: z.string().min(1, 'Nama supplier wajib diisi'),
@@ -136,7 +137,7 @@ export default function SuppliersTab() {
   };
 
   const handleDelete = async (supplierId: string) => {
-    if (!confirm('Hapus supplier ini?')) return;
+    if (!(await confirmDialog({ message: 'Hapus supplier ini?' }))) return;
     const removed = suppliers.find((s) => s.supplier_id === supplierId);
     setSuppliers((prev) => prev.filter((s) => s.supplier_id !== supplierId));
     const restore = () => {
@@ -166,7 +167,7 @@ export default function SuppliersTab() {
   };
 
   const handleBulkDeactivate = async () => {
-    if (!confirm(`Nonaktifkan ${selectedIds.size} supplier terpilih?`)) return;
+    if (!(await confirmDialog({ message: `Nonaktifkan ${selectedIds.size} supplier terpilih?` }))) return;
     setIsBulkBusy(true);
     try {
       const results = await Promise.all(

@@ -18,6 +18,7 @@ import { itemImportRowSchema, itemCreateSchema } from '@/lib/validation';
 import { fetchUsdIdrRate, toIDR } from '@/lib/currency';
 import { Plus, Edit, Trash2, Search, Package, RefreshCw, Upload, Ban, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const itemFormSchema = itemCreateSchema.extend({
   item_name: z.string().min(1, 'Nama item wajib diisi'),
@@ -231,7 +232,7 @@ export default function ItemsTab() {
   };
 
   const handleDelete = async (itemCode: string) => {
-    if (!confirm('Hapus item ini?')) return;
+    if (!(await confirmDialog({ message: 'Hapus item ini?' }))) return;
     const removed = queryClient.getQueryData<Item[]>(['items'])?.find((i) => i.item_code === itemCode);
     queryClient.setQueryData<Item[]>(['items'], (old) => (old ?? []).filter((i) => i.item_code !== itemCode));
     const restore = () => {
@@ -263,7 +264,7 @@ export default function ItemsTab() {
   };
 
   const handleBulkDeactivate = async () => {
-    if (!confirm(`Nonaktifkan ${visibleSelectedIds.size} item terpilih?`)) return;
+    if (!(await confirmDialog({ message: `Nonaktifkan ${visibleSelectedIds.size} item terpilih?` }))) return;
     setIsBulkBusy(true);
     try {
       const results = await Promise.all(

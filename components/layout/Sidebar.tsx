@@ -46,13 +46,13 @@ interface SidebarProps {
 function SidebarInner({ permissions, animateIn }: SidebarProps) {
   const { data: session } = useSession();
   const isSuperAdmin = !!session?.user.isSuperAdmin;
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Lazy initializer instead of a post-mount effect — reads localStorage synchronously
+  // during the first render so the sidebar never flashes expanded-then-collapses.
+  const [isCollapsed, setIsCollapsed] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem('sidebar_collapsed') === '1'
+  );
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setIsCollapsed(localStorage.getItem('sidebar_collapsed') === '1');
-  }, []);
 
   useEffect(() => {
     const check = () => {

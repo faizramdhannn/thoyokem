@@ -5,6 +5,7 @@ import { SessionProvider, useSession, signOut } from 'next-auth/react';
 import { Session } from 'next-auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import ConfirmDialogHost from '@/components/ui/ConfirmDialogHost';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -90,6 +91,7 @@ export default function AuthProvider({ children, session }: AuthProviderProps) {
       <SessionActivityRenewer />
       <QueryClientProvider client={queryClient}>
         {children}
+        <ConfirmDialogHost />
         <Toaster
           position="top-right"
           toastOptions={{

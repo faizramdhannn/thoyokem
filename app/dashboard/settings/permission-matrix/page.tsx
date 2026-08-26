@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Card from '@/components/ui/Card';
 import Loading from '@/components/ui/Loading';
 import { Role } from '@/types';
@@ -169,7 +168,7 @@ export default function PermissionMatrixPage() {
 
   if (!session.user.permissions.setting) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <ShieldCheck className="mx-auto text-gray-400 mb-3" size={40} />
@@ -177,12 +176,12 @@ export default function PermissionMatrixPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access the Permission Matrix.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <div className="space-y-4">
         <div>
           <Link href="/dashboard/settings" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary mb-2">
@@ -374,6 +373,6 @@ export default function PermissionMatrixPage() {
           )}
         </Card>
       </div>
-    </DashboardLayout>
+    
   );
 }

@@ -15,6 +15,7 @@ import { Supplier, Item, Warehouse } from '@/types';
 import { fetchUsdIdrRate, toIDR } from '@/lib/currency';
 import { Plus, Trash2, Send, PackageCheck, XCircle, FileText, ShoppingCart, Check, Ban, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const poFormSchema = z.object({
   supplier_id: z.string().min(1, 'Supplier wajib dipilih'),
@@ -192,7 +193,7 @@ export default function PurchaseOrdersTab() {
   };
 
   const runAction = async (po_id: string, action: 'submit' | 'receive' | 'cancel' | 'approve' | 'reject') => {
-    if (action === 'cancel' && !confirm('Batalkan PO ini?')) return;
+    if (action === 'cancel' && !(await confirmDialog({ message: 'Batalkan PO ini?' }))) return;
     setBusyId(po_id);
     try {
       const res = await fetch('/api/purchase-orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ po_id, action }) });

@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import ReadyToDeliverTab from "./components/ReadyToDeliverTab";
 import DeliveryHistoryTab from "./components/DeliveryHistoryTab";
 import { AlertCircle } from "lucide-react";
@@ -27,7 +26,7 @@ function DeliveryOrderPageInner() {
 
   if (!session.user.permissions.delivery_order) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -35,7 +34,7 @@ function DeliveryOrderPageInner() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
@@ -46,7 +45,7 @@ function DeliveryOrderPageInner() {
   const { title } = titles[activeTab] || titles.ready;
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <div className="space-y-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
@@ -57,7 +56,7 @@ function DeliveryOrderPageInner() {
           {activeTab === "history" && <DeliveryHistoryTab />}
         </div>
       </div>
-    </DashboardLayout>
+    
   );
 }
 

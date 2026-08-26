@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Loading from '@/components/ui/Loading';
 import { OverflowMenu, OverflowMenuColumns } from '@/components/ui/ListView';
 import { ReportTable, ReportColumn, exportToExcel } from '@/components/ui/ReportView';
@@ -126,7 +125,7 @@ export default function ReportsPage() {
 
   if (!session.user.permissions.report_builder) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <BarChart3 className="mx-auto text-gray-400 mb-3" size={40} />
@@ -134,12 +133,12 @@ export default function ReportsPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access Report Builder.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <div className="space-y-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -213,6 +212,6 @@ export default function ReportsPage() {
           </>
         )}
       </div>
-    </DashboardLayout>
+    
   );
 }

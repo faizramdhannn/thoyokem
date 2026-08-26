@@ -7,6 +7,7 @@ import { ListViewLayout, ListRow, ListRowAvatar } from '@/components/ui/ListView
 import { useViewMode, useVisibleColumns, ReportViewControls, ReportTable, exportToExcel, ReportColumn } from '@/components/ui/ReportView';
 import { Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 interface SalesOrderWithItems {
   so_id: string;
@@ -52,7 +53,7 @@ export default function ReadyToDeliverTab() {
   };
 
   const handleDeliver = async (so_id: string) => {
-    if (!confirm(`Mulai proses pengiriman untuk ${so_id}? Stok baru terpotong setelah Good Issue di tahap Pick/Pack.`)) return;
+    if (!(await confirmDialog({ message: `Mulai proses pengiriman untuk ${so_id}? Stok baru terpotong setelah Good Issue di tahap Pick/Pack.`, danger: false, confirmText: 'Ya, Mulai' }))) return;
     setBusyId(so_id);
     try {
       const res = await fetch('/api/sales-orders', {

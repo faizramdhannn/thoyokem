@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useSession } from "next-auth/react";
 import { redirect, useRouter, useSearchParams, usePathname } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Loading from "@/components/ui/Loading";
@@ -32,6 +31,7 @@ import * as XLSX from "xlsx";
 import { logExport } from "@/lib/logExport";
 import { formatDate, formatDateTime } from "@/lib/date";
 import toast from "react-hot-toast";
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 const LEAVE_COLUMNS: ColumnDef[] = [
   { key: "employee_name", header: "Name" },
@@ -284,7 +284,7 @@ export default function LeavePage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this leave request?")) return;
+    if (!(await confirmDialog({ message: "Are you sure you want to delete this leave request?" }))) return;
     try {
       const response = await fetch(`/api/leave?id=${id}`, { method: "DELETE" });
       if (response.ok) fetchData();
@@ -303,7 +303,7 @@ export default function LeavePage() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Hapus ${selectedIds.size} pengajuan cuti terpilih?`)) return;
+    if (!(await confirmDialog({ message: `Hapus ${selectedIds.size} pengajuan cuti terpilih?` }))) return;
     setIsBulkBusy(true);
     try {
       const results = await Promise.all(
@@ -377,15 +377,7 @@ export default function LeavePage() {
   // ── Permission guard ──────────────────────────────────────────────────────
   if (!session.user.permissions.leave) {
     return (
-      <DashboardLayout
-        user={{
-          id: session.user.id,
-          username: session.user.email || "",
-          name: session.user.name ?? "",
-          role: session.user.role,
-          permissions: session.user.permissions,
-        }}
-      >
+      
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <ShieldOff size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Access Restricted</h2>
@@ -394,22 +386,14 @@ export default function LeavePage() {
             Please contact an administrator.
           </p>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   const hasActiveFilter = searchName || filterCategory || filterDateFrom || filterDateTo;
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <>
       <ListViewLayout
         title="Leave Management"
@@ -729,6 +713,6 @@ export default function LeavePage() {
         </Modal>
 
       </>
-    </DashboardLayout>
+    
   );
 }

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from '@/lib/auth';
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import HRDashboardContent from "./HRDashboardContent";
 import { AlertCircle } from "lucide-react";
 
@@ -16,15 +15,7 @@ export default async function HRDashboardPage() {
 
   if (!hasHRAccess) {
     return (
-      <DashboardLayout
-        user={{
-          id: session.user.id,
-          username: session.user.email || "",
-          name: session.user.name ?? "",
-          role: session.user.role,
-          permissions: session.user.permissions,
-        }}
-      >
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -36,21 +27,13 @@ export default async function HRDashboardPage() {
             </p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <HRDashboardContent permissions={session.user.permissions} />
-    </DashboardLayout>
+    
   );
 }

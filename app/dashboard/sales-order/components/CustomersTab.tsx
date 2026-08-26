@@ -16,6 +16,7 @@ import { Customer } from '@/types';
 import { customerImportRowSchema, customerCreateSchema } from '@/lib/validation';
 import { Plus, Edit, Trash2, User, Upload, Ban, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 // Same shape the API validates against (lib/validation.ts), just with customer_name
 // tightened to required for immediate client-side feedback instead of only on submit.
@@ -141,7 +142,7 @@ export default function CustomersTab() {
   };
 
   const handleDelete = async (customerId: string) => {
-    if (!confirm('Hapus customer ini?')) return;
+    if (!(await confirmDialog({ message: 'Hapus customer ini?' }))) return;
     // Optimistic: remove immediately, re-insert just this row on failure. Using a functional
     // update (not a captured full-array snapshot) so a concurrent delete of another row that
     // already succeeded isn't clobbered back in by this rollback.
@@ -174,7 +175,7 @@ export default function CustomersTab() {
   };
 
   const handleBulkDeactivate = async () => {
-    if (!confirm(`Nonaktifkan ${selectedIds.size} customer terpilih?`)) return;
+    if (!(await confirmDialog({ message: `Nonaktifkan ${selectedIds.size} customer terpilih?` }))) return;
     setIsBulkBusy(true);
     try {
       const results = await Promise.all(

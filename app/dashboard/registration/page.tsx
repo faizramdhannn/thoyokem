@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { redirect } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import Button from "@/components/ui/Button";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { ListViewLayout, ListRow, ListRowAvatar, StatusBadge } from "@/components/ui/ListView";
@@ -75,15 +74,7 @@ export default function RegistrationPage() {
   // Access denied
   if (!session.user.permissions.registration_request) {
     return (
-      <DashboardLayout
-        user={{
-          id: session.user.id,
-          username: session.user.email || "",
-          name: session.user.name ?? "",
-          role: session.user.role,
-          permissions: session.user.permissions,
-        }}
-      >
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -95,7 +86,7 @@ export default function RegistrationPage() {
             </p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
@@ -129,15 +120,7 @@ export default function RegistrationPage() {
   ];
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <ListViewLayout
         title="Registration Requests"
         filterGroups={[
@@ -197,6 +180,6 @@ export default function RegistrationPage() {
           ))
         )}
       </ListViewLayout>
-    </DashboardLayout>
+    
   );
 }

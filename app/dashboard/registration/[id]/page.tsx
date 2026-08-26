@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/ui/Button';
 import { DetailView, DetailSection, FieldGrid } from '@/components/ui/DetailView';
 import { StatusBadge } from '@/components/ui/ListView';
@@ -84,7 +83,7 @@ export default function RegistrationDetailPage() {
 
   if (!session.user.permissions.registration_request) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -92,12 +91,12 @@ export default function RegistrationDetailPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <DetailView
         backHref="/dashboard/registration"
         backLabel="Registration Requests"
@@ -145,6 +144,6 @@ export default function RegistrationDetailPage() {
           </div>
         )}
       </DetailView>
-    </DashboardLayout>
+    
   );
 }

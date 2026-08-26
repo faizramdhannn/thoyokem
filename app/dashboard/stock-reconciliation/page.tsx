@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Loading from '@/components/ui/Loading';
 import { DetailTable } from '@/components/ui/DetailView';
 import Button from '@/components/ui/Button';
 import { AlertCircle, ShieldAlert, RefreshCw, Wrench } from 'lucide-react';
 import { Warehouse } from '@/types';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 interface Discrepancy {
   source: 'Delivery Note' | 'Purchase Receipt' | 'Stock Entry';
@@ -57,7 +57,7 @@ export default function StockReconciliationPage() {
   const rowKey = (d: Discrepancy) => `${d.source}::${d.doc_id}::${d.item_code}::${d.warehouse_id}`;
 
   const handleFix = async (d: Discrepancy) => {
-    if (!confirm(`Tambahkan koreksi ${d.missing_qty > 0 ? '+' : ''}${d.missing_qty} untuk ${d.item_name} di ${warehouseName(d.warehouse_id)}?`)) return;
+    if (!(await confirmDialog({ message: `Tambahkan koreksi ${d.missing_qty > 0 ? '+' : ''}${d.missing_qty} untuk ${d.item_name} di ${warehouseName(d.warehouse_id)}?`, danger: false, confirmText: 'Ya, Tambahkan' }))) return;
     setBusyKey(rowKey(d));
     try {
       const res = await fetch('/api/stock-reconciliation', {
@@ -93,7 +93,7 @@ export default function StockReconciliationPage() {
 
   if (!isSuperAdmin) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -101,12 +101,12 @@ export default function StockReconciliationPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">Halaman ini hanya untuk Super Admin.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -174,6 +174,6 @@ export default function StockReconciliationPage() {
           Catatan: Stock Entry bertipe Manufacture tidak ikut diperiksa otomatis, karena kebutuhan komponennya mengikuti BOM saat ini yang bisa saja sudah berubah sejak entry itu dibuat.
         </p>
       </div>
-    </DashboardLayout>
+    
   );
 }

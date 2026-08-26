@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import PurchaseOrdersTab from "./components/PurchaseOrdersTab";
 import SuppliersTab from "./components/SuppliersTab";
 import PurchaseInvoicesTab from "./components/PurchaseInvoicesTab";
@@ -21,15 +20,7 @@ function PurchasingPageInner() {
 
   if (!session.user.permissions.purchasing) {
     return (
-      <DashboardLayout
-        user={{
-          id: session.user.id,
-          username: session.user.email || "",
-          name: session.user.name ?? "",
-          role: session.user.role,
-          permissions: session.user.permissions,
-        }}
-      >
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -37,7 +28,7 @@ function PurchasingPageInner() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
@@ -50,15 +41,7 @@ function PurchasingPageInner() {
   const { title } = titles[activeTab] || titles.overview;
 
   return (
-    <DashboardLayout
-      user={{
-        id: session.user.id,
-        username: session.user.email || "",
-        name: session.user.name ?? "",
-        role: session.user.role,
-        permissions: session.user.permissions,
-      }}
-    >
+    
       <div className="space-y-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
@@ -71,7 +54,7 @@ function PurchasingPageInner() {
           {activeTab === "suppliers" && <SuppliersTab />}
         </div>
       </div>
-    </DashboardLayout>
+    
   );
 }
 

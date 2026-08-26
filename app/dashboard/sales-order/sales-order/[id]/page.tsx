@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import Button from '@/components/ui/Button';
 import { DetailView, DetailSection, FieldGrid, DetailTable } from '@/components/ui/DetailView';
 import { StatusBadge } from '@/components/ui/ListView';
@@ -16,6 +15,7 @@ import { AlertCircle, Send, XCircle, FileText, Check, Ban, History, Printer, Cop
 import { formatDate } from '@/lib/date';
 import { useDoctypePermission } from '@/lib/useDoctypePermission';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/components/ui/ConfirmDialogHost';
 
 interface SalesOrderWithItems {
   so_id: string;
@@ -78,8 +78,8 @@ export default function SalesOrderDetailPage() {
   };
 
   const runAction = async (action: 'submit' | 'cancel' | 'approve' | 'reject' | 'amend') => {
-    if (action === 'cancel' && !confirm('Batalkan SO ini? Kalau sudah Delivered, stok yang sudah keluar akan dibalik.')) return;
-    if (action === 'amend' && !confirm('Buat draft baru dari SO ini?')) return;
+    if (action === 'cancel' && !(await confirmDialog({ message: 'Batalkan SO ini? Kalau sudah Delivered, stok yang sudah keluar akan dibalik.' }))) return;
+    if (action === 'amend' && !(await confirmDialog({ message: 'Buat draft baru dari SO ini?', danger: false, confirmText: 'Ya, Amend' }))) return;
     setBusy(true);
     try {
       const res = await fetch('/api/sales-orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ so_id: id, action }) });
@@ -102,7 +102,7 @@ export default function SalesOrderDetailPage() {
   };
 
   const duplicateOrder = async () => {
-    if (!so || !confirm(`Buat Sales Order baru sebagai salinan dari ${so.so_id}?`)) return;
+    if (!so || !(await confirmDialog({ message: `Buat Sales Order baru sebagai salinan dari ${so.so_id}?`, danger: false, confirmText: 'Ya, Duplikat' }))) return;
     setBusy(true);
     try {
       const res = await fetch('/api/sales-orders', {
@@ -158,7 +158,7 @@ export default function SalesOrderDetailPage() {
 
   if (!session.user.permissions.sales_order) {
     return (
-      <DashboardLayout user={layoutUser}>
+      
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <AlertCircle className="mx-auto text-red-500 mb-3" size={40} />
@@ -166,12 +166,12 @@ export default function SalesOrderDetailPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to access this page.</p>
           </div>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout user={layoutUser}>
+    
       <DetailView
         backHref="/dashboard/sales-order"
         backLabel="Sales Orders"
@@ -291,6 +291,6 @@ export default function SalesOrderDetailPage() {
           </div>
         )}
       </DetailView>
-    </DashboardLayout>
+    
   );
 }
