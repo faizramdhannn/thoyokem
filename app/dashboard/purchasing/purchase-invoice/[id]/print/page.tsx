@@ -45,7 +45,7 @@ export default function PurchaseInvoicePrintPage() {
   };
 
   if (status !== 'loading' && !session) redirect('/login');
-  if (status === 'loading' || isLoading) return null;
+  if (status === 'loading' && !session || isLoading) return null;
   if (!session) return null;
   if (!hasAccess) return <p className="p-6 text-sm text-red-600">You don't have permission to access this page.</p>;
   if (!invoice) return <p className="p-6 text-sm text-gray-500">Purchase invoice tidak ditemukan.</p>;

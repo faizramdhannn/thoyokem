@@ -23,7 +23,7 @@ function AttendancePageInner() {
     redirect("/login");
   }
 
-  if (status === "loading") {
+  if (status === "loading" && !session) {
     return null;
   }
 

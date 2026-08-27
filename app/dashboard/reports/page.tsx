@@ -112,7 +112,7 @@ export default function ReportsPage() {
   }, [rows, searchTerm, visibleCols]);
 
   if (status !== 'loading' && !session) redirect('/login');
-  if (status === 'loading') return <div className="flex items-center justify-center min-h-screen"><Loading size="lg" /></div>;
+  if (status === 'loading' && !session) return <div className="flex items-center justify-center min-h-screen"><Loading size="lg" /></div>;
   if (!session) return null;
 
   const layoutUser = {

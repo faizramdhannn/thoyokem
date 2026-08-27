@@ -145,7 +145,7 @@ export default function PurchaseOrderDetailPage() {
   };
 
   if (status !== 'loading' && !session) redirect('/login');
-  if (status === 'loading') return null;
+  if (status === 'loading' && !session) return null;
   if (!session) return null;
 
   const layoutUser = {

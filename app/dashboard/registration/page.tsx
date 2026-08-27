@@ -63,7 +63,7 @@ export default function RegistrationPage() {
   }
 
   // Return null during auth check
-  if (status === "loading") {
+  if (status === "loading" && !session) {
     return null;
   }
 

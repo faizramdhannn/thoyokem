@@ -65,7 +65,7 @@ export default function SuratJalanPrintPage() {
   };
 
   if (status !== 'loading' && !session) redirect('/login');
-  if (status === 'loading' || isLoading) return null;
+  if (status === 'loading' && !session || isLoading) return null;
   if (!session) return null;
 
   if (!hasAccess) {

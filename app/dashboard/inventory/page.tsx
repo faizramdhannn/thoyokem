@@ -18,7 +18,7 @@ function InventoryPageInner() {
   const activeTab = searchParams.get("tab") || "overview";
 
   if (status !== "loading" && !session) redirect("/login");
-  if (status === "loading") return null;
+  if (status === "loading" && !session) return null;
   if (!session) return null;
 
   if (!session.user.permissions.inventory) {

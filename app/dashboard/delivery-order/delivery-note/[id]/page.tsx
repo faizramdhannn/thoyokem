@@ -95,7 +95,7 @@ export default function DeliveryNoteDetailPage() {
   };
 
   if (status !== 'loading' && !session) redirect('/login');
-  if (status === 'loading') return null;
+  if (status === 'loading' && !session) return null;
   if (!session) return null;
 
   const layoutUser = {
