@@ -30,7 +30,57 @@ function validateRow(row: AttendanceImport): string | null {
   const missing: string[] = [];
   if (!row.employee_name) missing.push('Nama');
   if (!row.attendance_date) missing.push('Tanggal Absensi');
-  return missing.length > 0 ? `Kolom wajib kosong: ${missing.join(', ')}` : null;
+  if (missing.length > 0) return `Kolom wajib kosong: ${missing.join(', ')}`;
+
+  // Catches the exact bug that corrupted 949 rows previously: Excel serializes
+  // dates/times as numbers, and reading the raw cell value instead of converting
+  // it produces "46231" (a date) or "0.3333333333333333" (a time) — silently
+  // wrong, not a parse error, so this format check is the only thing that catches it.
+  if (row.attendance_date && !/^\d{4}-\d{2}-\d{2}$/.test(row.attendance_date)) {
+    return `Format Tanggal Absensi tidak valid: "${row.attendance_date}" (harus YYYY-MM-DD)`;
+  }
+  for (const [label, value] of [['Jam Set', row.jam_set], ['Jam Absensi', row.jam_absensi]] as const) {
+    if (value && !/^\d{1,2}:\d{2}(:\d{2})?$/.test(value)) {
+      return `Format ${label} tidak valid: "${value}" (harus HH:MM)`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Converts an Excel date/time serial number to a UTC-based JS Date. Excel's day 0 is
+ * 1899-12-30 (25569 is the day-count offset to the Unix epoch) — this is the same
+ * formula SheetJS itself uses internally for `cellDates`, kept here as an explicit
+ * fallback for cells SheetJS doesn't auto-detect as dates (e.g. a numeric cell left
+ * as "General" format instead of a date/time format in the source spreadsheet).
+ */
+function excelSerialToDate(serial: number): Date {
+  const utcDays = Math.floor(serial - 25569);
+  const date = new Date(utcDays * 86400 * 1000);
+  const fractionalDay = serial - Math.floor(serial);
+  const totalSeconds = Math.round(fractionalDay * 86400);
+  date.setUTCHours(Math.floor(totalSeconds / 3600), Math.floor((totalSeconds % 3600) / 60), totalSeconds % 60, 0);
+  return date;
+}
+
+function toDateObj(value: unknown): Date | null {
+  if (value instanceof Date) return value;
+  if (typeof value === 'number' && isFinite(value)) return excelSerialToDate(value);
+  return null;
+}
+
+/** Formats a date cell (Date object, raw Excel serial, or already-a-string) as YYYY-MM-DD. */
+function formatAttendanceDate(value: unknown): string {
+  const d = toDateObj(value);
+  if (d) return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  return String(value ?? '').trim();
+}
+
+/** Formats a time cell (Date object, raw Excel serial fraction, or already-a-string) as HH:MM. */
+function formatAttendanceTime(value: unknown): string {
+  const d = toDateObj(value);
+  if (d) return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  return String(value ?? '').trim();
 }
 
 export default function ImportTab({ onImported }: ImportTabProps) {
@@ -118,7 +168,12 @@ export default function ImportTab({ onImported }: ImportTabProps) {
       reader.onload = (e) => {
         try {
           const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'binary' });
+          // cellDates: true — makes SheetJS parse date/time-formatted numeric cells
+          // into JS Date objects instead of leaving them as raw Excel serial numbers
+          // (e.g. 46231, 0.3333333333333333), which is exactly the bug that silently
+          // corrupted attendance_date/jam_set/jam_absensi before (fixed data + this
+          // guard: excelSerialToDate() below still catches cells SheetJS misses).
+          const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet);
@@ -127,9 +182,9 @@ export default function ImportTab({ onImported }: ImportTabProps) {
             cloud_id: String(row['Cloud ID'] || ''),
             id: String(row['ID'] || ''),
             employee_name: String(row['Nama'] || ''),
-            attendance_date: String(row['Tanggal Absensi'] || ''),
-            jam_set: String(row['Jam Set'] || ''),
-            jam_absensi: String(row['Jam Absensi'] || ''),
+            attendance_date: formatAttendanceDate(row['Tanggal Absensi']),
+            jam_set: formatAttendanceTime(row['Jam Set']),
+            jam_absensi: formatAttendanceTime(row['Jam Absensi']),
             verifikasi: String(row['Verifikasi'] || ''),
             tipe_absensi: String(row['Tipe Absensi'] || ''),
             designation: String(row['Jabatan'] || ''),

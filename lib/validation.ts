@@ -429,14 +429,23 @@ export const stockReconciliationCreateSchema = z.object({
 
 // ── Attendance import (array body, not an object) ────────────────────────
 
+// Server-side backstop for the same bug the client-side Excel parser guards against
+// (ImportTab.tsx): a raw Excel date/time serial ("46231", "0.3333333333333333") reads
+// as a perfectly valid non-empty string, so without this format check the API would
+// silently accept and store it — which is exactly what corrupted 949 rows previously.
+// Empty string is allowed through (`.or(z.literal(''))`) since jam_set/jam_absensi are
+// legitimately blank for some rows; only a non-empty value must match the real format.
+const attendanceDateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'attendance_date harus format YYYY-MM-DD').optional().nullable();
+const attendanceTimeField = z.string().regex(/^\d{1,2}:\d{2}(:\d{2})?$/, 'jam harus format HH:MM').or(z.literal('')).optional().nullable();
+
 export const attendanceImportSchema = z.array(
   z.object({
     cloud_id: z.string().optional().nullable(),
     id: z.string().optional().nullable(),
     employee_name: z.string().optional().nullable(),
-    attendance_date: z.string().optional().nullable(),
-    jam_set: z.string().optional().nullable(),
-    jam_absensi: z.string().optional().nullable(),
+    attendance_date: attendanceDateField,
+    jam_set: attendanceTimeField,
+    jam_absensi: attendanceTimeField,
     verifikasi: z.string().optional().nullable(),
     tipe_absensi: z.string().optional().nullable(),
     designation: z.string().optional().nullable(),
